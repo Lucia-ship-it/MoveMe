@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MoveMe</title>
+<style>
+/* Themes: change colors here only */
+:root,[data-theme="sage"]{
+    --bg:#f3f5f0; --card:#ffffff; --text:#2b3a33; --muted:#7b8a82;
+    --accent:#6f9a85; --accent-text:#ffffff; --soft:#e4ebe5;
+    --warn:#e0a458; --danger:#d1675a;
+}
+[data-theme="sand"]{
+    --bg:#f7f1ea; --card:#fffdfa; --text:#3d3029; --muted:#94857a;
+    --accent:#c97c5d; --accent-text:#ffffff; --soft:#f0e4d8;
+    --warn:#d9a441; --danger:#b5483b;
+}
+[data-theme="night"]{
+    --bg:#16202a; --card:#1f2c38; --text:#e6edf2; --muted:#8fa1b0;
+    --accent:#5fb3a8; --accent-text:#10202a; --soft:#2a3a48;
+    --warn:#e8b45c; --danger:#e07a6c;
+    color-scheme:dark;
+}
+
+body{margin:0; background:var(--bg); color:var(--text); font-family:"Segoe UI",sans-serif; transition:background .3s;}
+.container{max-width:1000px; margin:auto; padding:25px;}
+header{display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:20px;}
+h1{margin:0; font-size:28px;}
+h2{margin-top:0; font-size:19px;}
+.subtitle{color:var(--muted);}
+.layout{display:grid; grid-template-columns:1fr 1fr; gap:20px;}
+.card{background:var(--card); border-radius:18px; padding:22px; box-shadow:0 4px 18px rgba(0,0,0,.06); margin-bottom:20px;}
+
+.circle{width:260px; height:260px; border-radius:50%; background:var(--accent); display:flex; align-items:center; justify-content:center; margin:auto; transition:background .5s;}
+.circle.warn{background:var(--warn);}
+.circle.danger{background:var(--danger);}
+.inner{width:214px; height:214px; border-radius:50%; background:var(--card); display:flex; flex-direction:column; justify-content:center; align-items:center;}
+.timer{font-size:52px; font-weight:600;}
+.label{color:var(--muted);}
+.warning{text-align:center; margin-top:15px; min-height:25px; font-weight:600;}
+.activity{text-align:center; margin-top:10px; font-size:20px; min-height:60px;}
+
+button{border:none; border-radius:10px; padding:10px 15px; cursor:pointer; margin:4px; font:inherit; transition:filter .2s;}
+button:hover{filter:brightness(.93);}
+.primary{background:var(--accent); color:var(--accent-text);}
+.secondary{background:var(--soft); color:var(--text);}
+.buttons{text-align:center; margin-top:10px;}
+
+.progress{height:12px; background:var(--soft); border-radius:10px; overflow:hidden; margin:6px 0 16px;}
+.fill{height:100%; background:var(--accent); width:0; transition:width .4s;}
+.water{font-size:32px; text-align:center; margin:16px 0; letter-spacing:2px;}
+.extra{text-align:center; color:var(--muted); margin-top:10px;}
+.bonus{font-size:.6em; font-weight:600; color:var(--accent); vertical-align:middle;}
+#walks .bonus,#eyes .bonus,#stretches .bonus{font-size:.85em;}
+
+input{font:inherit; padding:9px 10px; border-radius:10px; border:1px solid var(--soft); background:var(--bg); color:var(--text);}
+.meeting-form{display:flex; gap:6px; flex-wrap:wrap;}
+.meeting-form #meetingName{flex:1; min-width:120px;}
+.meeting-form button{margin:0;}
+.meetings{list-style:none; padding:0; margin:12px 0 0;}
+.meetings li{display:flex; align-items:center; gap:10px; padding:8px 0; border-top:1px solid var(--soft);}
+.meetings li.past{opacity:.45;}
+.meetings .name{flex:1;}
+.meetings button{padding:2px 9px; margin:0;}
+.empty{color:var(--muted);}
+
+.themes button{width:26px; height:26px; padding:0; border-radius:50%; border:2px solid transparent;}
+.themes button.active{border-color:var(--text);}
+
+.toast{position:fixed; top:20px; right:20px; background:var(--accent); color:var(--accent-text); padding:16px; border-radius:12px; max-width:320px; display:none; z-index:9999; box-shadow:0 10px 30px rgba(0,0,0,.25);}
+
+@media(max-width:800px){ .layout{grid-template-columns:1fr;} }
+</style>
+</head>
+<body>
+
+<div id="toast" class="toast"></div>
+
+<div class="container">
+
+<header>
+    <div>
+        <h1>🚶 MoveMe</h1>
+        <div class="subtitle">Your Personal Health Break Coach</div>
+    </div>
+    <div class="themes" id="themes">
+        <button data-t="sage" style="background:#6f9a85" title="Sage"></button>
+        <button data-t="sand" style="background:#c97c5d" title="Sand"></button>
+        <button data-t="night" style="background:#1f2c38" title="Night"></button>
+    </div>
+</header>
+
+<div class="layout">
+
+<div>
+<div class="card">
+    <div class="circle" id="circle">
+        <div class="inner">
+            <div class="timer" id="timer">60:00</div>
+            <div class="label">until next break</div>
+        </div>
+    </div>
+
+    <div class="warning" id="warning"></div>
+    <div class="activity" id="activity"></div>
+
+    <div class="buttons">
+        <button class="secondary" onclick="newSuggestion()">🔄 Another Suggestion</button>
+    </div>
+    <div class="buttons">
+        <button class="secondary" onclick="addTime(5)">+5 min</button>
+        <button class="secondary" onclick="addTime(10)">+10 min</button>
+    </div>
+    <div class="extra">Extra time used: <span id="extraTime">0 / 30 min</span></div>
+</div>
+
+<div class="card">
+    <h2>📅 Today's Meetings</h2>
+    <div class="meeting-form">
+        <input type="time" id="meetingTime">
+        <input id="meetingName" placeholder="Meeting name" onkeydown="if(event.key==='Enter') addMeeting()">
+        <button class="primary" onclick="addMeeting()">Add</button>
+    </div>
+    <ul class="meetings" id="meetingList"></ul>
+</div>
+</div>
+
+<div>
+    <div class="card">
+        <h2>💧 Water Intake</h2>
+        <div id="waterDisplay" class="water"></div>
+        <button class="primary" style="width:100%" onclick="drinkWater()">+ Glass of Water</button>
+    </div>
+
+    <div class="card">
+        <h2>✅ Daily Progress</h2>
+
+        <div>Walking: <span id="walks"></span></div>
+        <div class="progress"><div class="fill" id="walksFill"></div></div>
+
+        <div>Eye Breaks: <span id="eyes"></span></div>
+        <div class="progress"><div class="fill" id="eyesFill"></div></div>
+
+        <div>Stretching: <span id="stretches"></span></div>
+        <div class="progress"><div class="fill" id="stretchesFill"></div></div>
+
+        <h3>I have completed:</h3>
+        <div class="buttons">
+            <button class="primary" onclick="addActivity('walks')">🚶 Walking</button>
+            <button class="primary" onclick="addActivity('eyes')">👀 Eye Break</button>
+            <button class="primary" onclick="addActivity('stretches')">🤸 Stretching</button>
+        </div>
+    </div>
+</div>
+
+</div>
+</div>
+
+<script>
+
+const BREAK_MINUTES = 60;
+const WORKDAY_SECONDS = 8.5 * 3600;
+const EXTRA_LIMIT = 30;
+
+// Goal messages - one is picked randomly when the goal is reached
+const goals = {
+    water: { max: 8, msgs: [
+        "💧 Hydration Queen unlocked! Your body says thank you.",
+        "💧 8 glasses down! Your kidneys are throwing a party.",
+        "💧 Fully hydrated! You're basically a houseplant that thrives.",
+        "💧 Water goal done! Your skin and brain both noticed."
+    ]},
+    walks: { max: 8, msgs: [
+        "🚶 Walking Champion! Your chair feels abandoned.",
+        "🚶 Step master! The office corridors know your name now.",
+        "🚶 Walking goal done! Your legs say thanks for the attention.",
+        "🚶 8 walks! Your fitness tracker is proud of you."
+    ]},
+    eyes: { max: 6, msgs: [
+        "👀 Eagle Vision unlocked! Your eyes appreciate today's breaks.",
+        "👀 Eye goal done! The screen can wait, your eyes can't.",
+        "👀 Sharp eyes, sharp mind! All eye breaks completed.",
+        "👀 Your eyes just sent you a thank-you card."
+    ]},
+    stretches: { max: 4, msgs: [
+        "🤸 Human Shape Preserved! Stretching goal completed.",
+        "🤸 Flexible like a cat! Stretching goal done.",
+        "🤸 Your back called. It says: finally!",
+        "🤸 Stretch goal done! Your spine is doing a happy dance."
+    ]}
+};
+
+// Shown for every click above the daily goal
+const bonusMsgs = [
+    "🔥 Above and beyond! You're a real champ.",
+    "💪 Goal already done and you keep going? Legend!",
+    "⭐ Overachiever mode: ON. Respect!",
+    "🏅 Bonus points! Nobody can stop you today.",
+    "🚀 You're on fire! Your body loves you for this.",
+    "👑 Absolute hero. Keep it up!"
+];
+
+const suggestions = [
+    "🚶 Go get some water",
+    "🚶 Walk around the office",
+    "🚶 Visit another room",
+    "🚶 Take a restroom break",
+    "👀 Look outside for 20 seconds",
+    "👀 Focus on a distant object",
+    "👀 Give your eyes a screen break",
+    "🤸 Stretch your wrists",
+    "🤸 Roll your shoulders",
+    "🤸 Do 5 squats",
+    "🤸 Stand up and stretch"
+];
+
+// ---------- Saved state (survives closing the window) ----------
+
+function today(){
+    const d = new Date();
+    return d.getFullYear() + "-" + (d.getMonth()+1) + "-" + d.getDate();
+}
+
+function freshDay(){
+    return {
+        date: today(), water: 0, walks: 0, eyes: 0, stretches: 0,
+        extra: 0, worked: 0, perfect: false, workdayDone: false, meetings: []
+    };
+}
+
+let state;
+try { state = JSON.parse(localStorage.getItem("moveme")); } catch(e) {}
+let breakEndsAt = 0;
+if(!state || state.date !== today()) state = freshDay();
+else breakEndsAt = Number(localStorage.getItem("moveme-break")) || 0;
+state.meetings = state.meetings || [];
+let lastTick = Date.now();
+let lastWarning = "";
+
+function save(){
+    try {
+        localStorage.setItem("moveme", JSON.stringify(state));
+        localStorage.setItem("moveme-break", breakEndsAt);
+    } catch(e) {}
+}
+
+function startBreakTimer(){
+    breakEndsAt = Date.now() + BREAK_MINUTES * 60000;
+    lastWarning = "";
+    document.getElementById("warning").innerText = "";
+    save();
+}
+
+// ---------- Alerts (work also when window is minimized) ----------
+
+let audio;
+document.addEventListener("click", () => {
+    if(!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
+    if("Notification" in window && Notification.permission === "default"){
+        Notification.requestPermission();
+    }
+}, { once: true });
+
+function beep(){
+    if(!audio) return;
+    const o = audio.createOscillator(), g = audio.createGain();
+    o.frequency.value = 660;
+    g.gain.setValueAtTime(0.2, audio.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + 1);
+    o.connect(g).connect(audio.destination);
+    o.start(); o.stop(audio.currentTime + 1);
+}
+
+let titleBlink;
+function alertUser(message){
+    toast(message);
+    beep();
+    if("Notification" in window && Notification.permission === "granted"){
+        new Notification("MoveMe", { body: message });
+    }
+    if(document.hidden && !titleBlink){
+        titleBlink = setInterval(() => {
+            document.title = document.title === "MoveMe" ? "🔔 MoveMe!" : "MoveMe";
+        }, 1000);
+    }
+}
+
+document.addEventListener("visibilitychange", () => {
+    if(!document.hidden && titleBlink){
+        clearInterval(titleBlink);
+        titleBlink = null;
+        document.title = "MoveMe";
+    }
+});
+
+function toast(message){
+    const t = document.getElementById("toast");
+    t.textContent = message;
+    t.style.display = "block";
+    clearTimeout(t.hideTimer);
+    t.hideTimer = setTimeout(() => t.style.display = "none", 6000);
+}
+
+// ---------- Timer ----------
+
+function randomItem(list){
+    return list[Math.floor(Math.random() * list.length)];
+}
+
+function newSuggestion(){
+    document.getElementById("activity").innerText = randomItem(suggestions);
+}
+
+function addTime(minutes){
+    if(state.extra + minutes > EXTRA_LIMIT){
+        toast("⛔ Daily extra time limit reached.");
+        return;
+    }
+    state.extra += minutes;
+    breakEndsAt += minutes * 60000;
+    save();
+    render();
+}
+
+function tick(){
+    const now = Date.now();
+
+    // New day while the app is open
+    if(state.date !== today()){
+        state = freshDay();
+        startBreakTimer();
+    }
+
+    // Count worked time; skip big gaps (sleeping PC, lunch away)
+    const step = now - lastTick;
+    if(step < 5 * 60000) state.worked += step / 1000;
+    lastTick = now;
+
+    let left = Math.ceil((breakEndsAt - now) / 1000);
+
+    // Timer ended long ago (app was closed) - just start a new cycle quietly
+    if(left < -120){
+        startBreakTimer();
+        left = BREAK_MINUTES * 60;
+    }
+    else if(left <= 0){
+        alertUser("⏰ Time for a break! Get away from your desk for a moment.");
+        startBreakTimer();
+        newSuggestion();
+        left = BREAK_MINUTES * 60;
+    }
+
+    const circle = document.getElementById("circle");
+    circle.classList.toggle("danger", left <= 300);
+    circle.classList.toggle("warn", left > 300 && left <= 600);
+
+    let warning = left <= 300 ? "🚨 Break in 5 minutes" : left <= 600 ? "⚠️ Break in 10 minutes" : "";
+    if(warning !== lastWarning){
+        document.getElementById("warning").innerText = warning;
+        lastWarning = warning;
+    }
+
+    const m = Math.floor(left / 60), s = left % 60;
+    document.getElementById("timer").innerText =
+        String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
+
+    checkMeetings(now);
+
+    if(state.worked >= WORKDAY_SECONDS && !state.workdayDone){
+        state.workdayDone = true;
+        alertUser("🌟 Great job today! You already worked 8.5 hours. Time to relax and enjoy your evening.");
+    }
+
+    save();
+}
+
+// ---------- Meetings ----------
+
+const MEETING_REMINDER_MINUTES = 10;
+
+// "14:30" -> timestamp for today
+function timeToday(hhmm){
+    const [h, m] = hhmm.split(":");
+    const d = new Date();
+    d.setHours(h, m, 0, 0);
+    return d.getTime();
+}
+
+function addMeeting(){
+    const time = document.getElementById("meetingTime").value;
+    const name = document.getElementById("meetingName").value.trim() || "Meeting";
+    if(!time){
+        toast("🕒 Please pick a time for the meeting.");
+        return;
+    }
+    state.meetings.push({ time: time, name: name, reminded: false });
+    state.meetings.sort((a, b) => a.time.localeCompare(b.time));
+    document.getElementById("meetingName").value = "";
+    save();
+    renderMeetings();
+}
+
+function removeMeeting(index){
+    state.meetings.splice(index, 1);
+    save();
+    renderMeetings();
+}
+
+function checkMeetings(now){
+    let changed = false;
+    for(const m of state.meetings){
+        const start = timeToday(m.time);
+        if(!m.reminded && now >= start - MEETING_REMINDER_MINUTES * 60000){
+            m.reminded = true;
+            changed = true;
+            const minutes = Math.round((start - now) / 60000);
+            // Skip reminders for meetings that already started
+            if(minutes > 0){
+                alertUser("📅 " + m.name + " starts in " + minutes + " min. Stand up, stretch and grab some water first!");
+            }
+        }
+    }
+    // Re-render once a minute so finished meetings get greyed out
+    if(changed || new Date(now).getSeconds() === 0) renderMeetings();
+}
+
+function renderMeetings(){
+    const list = document.getElementById("meetingList");
+    list.innerHTML = "";
+    if(!state.meetings.length){
+        list.innerHTML = '<li class="empty">No meetings added for today.</li>';
+        return;
+    }
+    const now = Date.now();
+    state.meetings.forEach((m, i) => {
+        const li = document.createElement("li");
+        if(timeToday(m.time) < now) li.className = "past";
+        li.innerHTML = '<b></b><span class="name"></span><button class="secondary" title="Remove">✕</button>';
+        li.querySelector("b").textContent = m.time;
+        li.querySelector(".name").textContent = m.name;
+        li.querySelector("button").onclick = () => removeMeeting(i);
+        list.appendChild(li);
+    });
+}
+
+// ---------- Progress ----------
+
+function drinkWater(){
+    addActivity("water");
+}
+
+function addActivity(key){
+    state[key]++;
+
+    if(state[key] === goals[key].max){
+        toast(randomItem(goals[key].msgs));
+    }
+    else if(state[key] > goals[key].max){
+        toast(randomItem(bonusMsgs));
+    }
+
+    const allDone = Object.keys(goals).every(k => state[k] >= goals[k].max);
+    if(allDone && !state.perfect){
+        state.perfect = true;
+        setTimeout(() => toast("🏆 PERFECT HEALTH DAY! All goals completed. Amazing work!"), 3000);
+    }
+
+    save();
+    render();
+}
+
+// Small "+3" shown when the goal is exceeded
+function bonus(key){
+    const extra = state[key] - goals[key].max;
+    return extra > 0 ? ' <span class="bonus">+' + extra + '</span>' : "";
+}
+
+function render(){
+    const max = goals.water.max, drunk = Math.min(state.water, max);
+    document.getElementById("waterDisplay").innerHTML =
+        "💧".repeat(drunk) + "○".repeat(max - drunk) + bonus("water");
+
+    for(const key of ["walks", "eyes", "stretches"]){
+        const max = goals[key].max;
+        document.getElementById(key).innerHTML = Math.min(state[key], max) + " / " + max + bonus(key);
+        document.getElementById(key + "Fill").style.width = Math.min(state[key] / max * 100, 100) + "%";
+    }
+
+    document.getElementById("extraTime").innerText = state.extra + " / " + EXTRA_LIMIT + " min";
+}
+
+// ---------- Themes ----------
+
+function setTheme(name){
+    document.documentElement.dataset.theme = name;
+    document.querySelectorAll("#themes button").forEach(b =>
+        b.classList.toggle("active", b.dataset.t === name));
+    try { localStorage.setItem("moveme-theme", name); } catch(e) {}
+}
+
+document.querySelectorAll("#themes button").forEach(b =>
+    b.onclick = () => setTheme(b.dataset.t));
+
+let savedTheme = "sage";
+try { savedTheme = localStorage.getItem("moveme-theme") || "sage"; } catch(e) {}
+setTheme(savedTheme);
+
+// Ask before closing by accident - minimize instead
+window.addEventListener("beforeunload", e => {
+    e.preventDefault();
+    e.returnValue = "";
+});
+
+// ---------- Start ----------
+
+if(!breakEndsAt) startBreakTimer();
+newSuggestion();
+render();
+renderMeetings();
+tick();
+setInterval(tick, 1000);
+
+</script>
+</body>
+</html>

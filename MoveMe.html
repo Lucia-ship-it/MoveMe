@@ -1,0 +1,1594 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="sage">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MoveMe</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='46' fill='%235f9079'/><text x='50' y='68' font-size='52' text-anchor='middle'>🚶</text></svg>">
+<meta name="theme-color" content="#5f9079">
+<script>
+// Installable app only when served from the web (GitHub Pages), not as a local file
+if(location.protocol === "https:"){
+    document.write('<link rel="manifest" href="manifest.webmanifest">');
+}
+</script>
+<style>
+/* =========================================================
+   THEMES – all colors live here
+   ========================================================= */
+:root, [data-theme="sage"]{
+    --bg:#eef2ec; --card:#ffffff; --text:#22312a; --muted:#75867d; --border:#e1e8e0;
+    --accent:#5f9079; --accent-text:#ffffff; --soft:#e7eee8; --track:#e4ebe5;
+    --warn:#e0a24f; --danger:#d0645a; --meeting:#7b8cc6;
+    --shadow:0 1px 2px rgba(30,50,40,.05), 0 10px 30px rgba(30,50,40,.07);
+    color-scheme:light;
+}
+[data-theme="sand"]{
+    --bg:#f6efe7; --card:#fffdf9; --text:#3a2e27; --muted:#94847a; --border:#efe3d6;
+    --accent:#c4775a; --accent-text:#ffffff; --soft:#f3e7da; --track:#f0e3d6;
+    --warn:#d69a35; --danger:#b4473b; --meeting:#7f8fb8;
+    --shadow:0 1px 2px rgba(70,40,20,.05), 0 10px 30px rgba(70,40,20,.08);
+    color-scheme:light;
+}
+[data-theme="night"]{
+    --bg:#121a22; --card:#1b2630; --text:#e5ecf1; --muted:#8a9cab; --border:#26343f;
+    --accent:#5fb3a5; --accent-text:#0f1d24; --soft:#24333f; --track:#26353f;
+    --warn:#e8b25a; --danger:#e57b6c; --meeting:#8d9de0;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.3);
+    color-scheme:dark;
+}
+:root{
+    --c-water:#4b9fd5; --c-walks:#5aa27f; --c-eyes:#9a86d8; --c-stretches:#e28a59;
+    --radius:20px;
+}
+
+/* =========================================================
+   BASE
+   ========================================================= */
+*{box-sizing:border-box;}
+[hidden]{display:none !important;}
+body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,sans-serif;
+    font-size:15px; line-height:1.45; transition:background .3s, color .3s;
+}
+h1,h2,h3{margin:0; font-weight:650;}
+h2{font-size:16px; display:flex; align-items:center; gap:8px;}
+button{font:inherit; color:inherit; border:none; background:none; cursor:pointer;}
+input, select{
+    font:inherit; color:var(--text); background:var(--bg);
+    border:1px solid var(--border); border-radius:10px; padding:8px 10px; min-width:0;
+}
+input:focus, select:focus, button:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+
+.container{max-width:1120px; margin:auto; padding:22px 20px 40px;}
+
+/* Buttons */
+.btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:6px;
+    padding:9px 16px; border-radius:12px; font-weight:600;
+    transition:transform .1s, filter .2s, background .2s;
+}
+.btn:hover{filter:brightness(.95);}
+.btn:active{transform:scale(.97);}
+.btn.primary{background:var(--accent); color:var(--accent-text);}
+.btn.ghost{background:var(--soft);}
+.btn.small{padding:6px 11px; font-size:13px; border-radius:10px;}
+.icon-btn{
+    width:36px; height:36px; border-radius:50%; display:inline-flex;
+    align-items:center; justify-content:center; background:var(--soft); font-size:17px;
+}
+.icon-btn:hover{filter:brightness(.95);}
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+header{display:flex; justify-content:space-between; align-items:center; gap:14px; flex-wrap:wrap; margin-bottom:20px;}
+.brand{display:flex; align-items:center; gap:12px;}
+.logo{
+    width:44px; height:44px; border-radius:14px; background:var(--accent);
+    display:flex; align-items:center; justify-content:center; font-size:24px;
+}
+.brand h1{font-size:22px; letter-spacing:-.3px;}
+.greeting{color:var(--muted); font-size:14px;}
+.header-right{display:flex; align-items:center; gap:10px;}
+.themes{display:flex; gap:6px; padding:5px; background:var(--card); border-radius:30px; box-shadow:var(--shadow);}
+.themes button{width:22px; height:22px; border-radius:50%; border:2px solid transparent; transition:transform .15s;}
+.themes button:hover{transform:scale(1.12);}
+.themes button.active{border-color:var(--text);}
+
+/* =========================================================
+   LAYOUT & CARDS
+   ========================================================= */
+.layout{display:grid; grid-template-columns:1.1fr 1fr; gap:20px; align-items:start;}
+.col{display:flex; flex-direction:column; gap:20px; min-width:0;}
+.card{background:var(--card); border-radius:var(--radius); padding:22px; box-shadow:var(--shadow); border:1px solid var(--border);}
+.card-head{display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:16px;}
+.muted{color:var(--muted);}
+
+/* =========================================================
+   MAIN TIMER
+   ========================================================= */
+.hero{text-align:center;}
+.ring-wrap{position:relative; width:250px; height:250px; margin:6px auto 0; --ring:var(--accent);}
+.ring-wrap.warn{--ring:var(--warn);}
+.ring-wrap.danger{--ring:var(--danger);}
+.ring-wrap.meeting{--ring:var(--meeting);}
+.ring-wrap.paused{--ring:var(--muted);}
+.ring{width:100%; height:100%; transform:rotate(-90deg);}
+.ring circle{fill:none; stroke-width:14;}
+.ring .track{stroke:var(--track);}
+.ring .bar{stroke:var(--ring); stroke-linecap:round; transition:stroke-dashoffset 1s linear, stroke .5s;}
+.ring-center{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;}
+.timer{font-size:54px; font-weight:650; letter-spacing:-1px; font-variant-numeric:tabular-nums;}
+.timer-label{color:var(--muted); font-size:14px; max-width:170px;}
+.ring-wrap.paused .timer{opacity:.55;}
+
+.status{min-height:24px; margin-top:12px; font-weight:600;}
+.status.warn{color:var(--warn);}
+.status.danger{color:var(--danger);}
+.status.meeting{color:var(--meeting);}
+
+.suggestion{
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    margin:10px auto 0; padding:12px 16px; border-radius:14px; background:var(--soft); max-width:380px;
+}
+.suggestion span{font-size:16px;}
+.suggestion button{font-size:16px; opacity:.6; transition:transform .3s, opacity .2s;}
+.suggestion button:hover{opacity:1; transform:rotate(180deg);}
+
+.controls{display:flex; justify-content:center; flex-wrap:wrap; gap:8px; margin-top:16px;}
+.extra-info{margin-top:10px; font-size:13px; color:var(--muted);}
+
+/* =========================================================
+   GOALS
+   ========================================================= */
+.tiles{display:grid; grid-template-columns:repeat(4,1fr); gap:10px;}
+.tile{text-align:center; padding:12px 4px 10px; border-radius:16px; background:var(--soft); position:relative; transition:transform .2s;}
+.tile.pop{animation:pop .5s;}
+@keyframes pop{40%{transform:scale(1.08);} }
+.tile-ring{position:relative; width:76px; height:76px; margin:auto; border-radius:50%; display:block;}
+.tile-ring svg{width:100%; height:100%; transform:rotate(-90deg);}
+.tile-ring circle{fill:none; stroke-width:7;}
+.tile-ring .track{stroke:var(--card);}
+.tile-ring .bar{stroke:var(--c); stroke-linecap:round; transition:stroke-dashoffset .5s;}
+.tile-ring .icon{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:26px; transition:transform .15s;}
+.tile-ring:hover .icon{transform:scale(1.15);}
+.tile-ring .plus{
+    position:absolute; right:-2px; bottom:-2px; width:24px; height:24px; border-radius:50%;
+    background:var(--c); color:#fff; font-weight:700; font-size:16px; line-height:24px;
+    box-shadow:0 2px 6px rgba(0,0,0,.2);
+}
+.tile-label{font-size:13px; color:var(--muted); margin-top:6px;}
+.tile-count{font-weight:650; font-size:17px; font-variant-numeric:tabular-nums;}
+.bonus{font-size:12px; font-weight:700; color:var(--c); margin-left:3px;}
+.tile .undo{position:absolute; top:6px; right:8px; font-size:12px; color:var(--muted); opacity:0; transition:opacity .2s;}
+.tile:hover .undo{opacity:1;}
+.water-drops{margin-top:14px; text-align:center; font-size:20px; letter-spacing:3px; min-height:28px;}
+
+/* =========================================================
+   WEEK
+   ========================================================= */
+.week{display:grid; grid-template-columns:repeat(7,1fr); gap:8px; align-items:end; height:130px; margin-top:4px;}
+.day-col{display:flex; flex-direction:column; align-items:center; gap:6px; height:100%;}
+.day-bar{flex:1; width:100%; max-width:34px; background:var(--soft); border-radius:9px; position:relative; overflow:hidden;}
+.day-bar .fill{position:absolute; left:0; right:0; bottom:0; background:var(--accent); border-radius:9px; transition:height .5s;}
+.day-bar.perfect .fill{background:linear-gradient(180deg, #f2c14e, var(--accent));}
+.day-bar.empty{background:repeating-linear-gradient(45deg, var(--soft), var(--soft) 4px, transparent 4px, transparent 8px);}
+.day-col.today .day-name{color:var(--text); font-weight:700;}
+.day-name{font-size:12px; color:var(--muted);}
+.stats{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:18px;}
+.stat{background:var(--soft); border-radius:14px; padding:10px 12px;}
+.stat b{display:block; font-size:20px; font-variant-numeric:tabular-nums;}
+.stat span{font-size:12px; color:var(--muted);}
+
+/* =========================================================
+   MEETINGS & TIMELINE
+   ========================================================= */
+.timeline{position:relative; height:46px; margin:4px 4px 26px;}
+.tl-track{position:absolute; left:0; right:0; top:14px; height:14px; border-radius:7px; background:var(--soft);}
+.tl-work{position:absolute; top:14px; height:14px; border-radius:7px; background:var(--track); opacity:.9;}
+.tl-meeting{position:absolute; top:10px; height:22px; border-radius:6px; background:var(--meeting); opacity:.85; min-width:4px;}
+.tl-now{position:absolute; top:4px; width:2px; height:34px; background:var(--danger); border-radius:2px;}
+.tl-now::after{content:""; position:absolute; top:-4px; left:-3px; width:8px; height:8px; border-radius:50%; background:var(--danger);}
+.tl-break{position:absolute; top:-10px; transform:translateX(-50%); font-size:14px;}
+.tl-hour{position:absolute; top:34px; transform:translateX(-50%); font-size:11px; color:var(--muted);}
+
+.meeting-form{display:grid; grid-template-columns:auto auto 1fr auto; gap:8px;}
+.meetings{list-style:none; padding:0; margin:14px 0 0;}
+.meetings li{display:flex; align-items:center; gap:12px; padding:10px 4px; border-top:1px solid var(--border);}
+.meetings li.past{opacity:.45;}
+.meetings li.live .m-time{color:var(--meeting);}
+.m-dot{width:10px; height:10px; border-radius:50%; background:var(--meeting); flex:none;}
+.m-time{font-weight:650; font-variant-numeric:tabular-nums; white-space:nowrap;}
+.m-name{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.m-badge{font-size:11px; font-weight:700; padding:2px 8px; border-radius:20px; background:var(--meeting); color:#fff;}
+.meetings .remove{color:var(--muted); padding:2px 6px; border-radius:6px;}
+.meetings .remove:hover{background:var(--soft); color:var(--danger);}
+.meetings .empty{color:var(--muted); justify-content:center; border:none;}
+
+/* =========================================================
+   BREAK OVERLAY
+   ========================================================= */
+.overlay{
+    position:fixed; inset:0; z-index:100; display:flex; align-items:center; justify-content:center;
+    background:rgba(10,20,15,.45); backdrop-filter:blur(6px); padding:16px; animation:fade .25s;
+}
+@keyframes fade{from{opacity:0;}}
+.break-panel{
+    background:var(--card); border-radius:26px; padding:28px; width:100%; max-width:460px;
+    text-align:center; box-shadow:0 30px 80px rgba(0,0,0,.3); animation:rise .3s;
+    max-height:calc(100vh - 32px); overflow:auto;
+}
+@keyframes rise{from{transform:translateY(20px); opacity:0;}}
+.break-panel h2{justify-content:center; font-size:22px;}
+.routine-tabs{display:flex; justify-content:center; gap:6px; margin:16px 0; flex-wrap:wrap;}
+.routine-tabs button{padding:7px 13px; border-radius:20px; background:var(--soft); font-size:14px;}
+.routine-tabs button.active{background:var(--accent); color:var(--accent-text);}
+.routine-tabs.locked button:not(.active){opacity:.35; pointer-events:none;}
+.break-ring{position:relative; width:170px; height:170px; margin:8px auto;}
+.break-ring svg{width:100%; height:100%; transform:rotate(-90deg);}
+.break-ring circle{fill:none; stroke-width:10;}
+.break-ring .track{stroke:var(--track);}
+.break-ring .bar{stroke:var(--accent); stroke-linecap:round; transition:stroke-dashoffset .25s linear;}
+.break-ring .center{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;}
+.break-ring .big{font-size:40px; font-weight:650; font-variant-numeric:tabular-nums;}
+.step-text{font-size:18px; font-weight:600; min-height:54px; margin:10px 0 4px;}
+.steps{list-style:none; padding:0; margin:12px 0 0; text-align:left; font-size:14px;}
+.steps li{display:flex; justify-content:space-between; gap:10px; padding:6px 10px; border-radius:10px; color:var(--muted);}
+.steps li.current{background:var(--soft); color:var(--text); font-weight:600;}
+.steps li.done{text-decoration:line-through; opacity:.6;}
+.break-buttons{display:flex; justify-content:center; gap:8px; margin-top:18px;}
+
+/* =========================================================
+   SETTINGS DIALOG
+   ========================================================= */
+dialog{
+    border:none; border-radius:24px; padding:0; width:min(520px, calc(100% - 32px));
+    background:var(--card); color:var(--text); box-shadow:0 30px 80px rgba(0,0,0,.3);
+}
+dialog::backdrop{background:rgba(10,20,15,.45); backdrop-filter:blur(4px);}
+.dlg-body{padding:24px; max-height:80vh; overflow:auto;}
+.dlg-body h2{font-size:20px; margin-bottom:16px;}
+.dlg-body h3{font-size:13px; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); margin:20px 0 10px;}
+.form-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px 14px;}
+.form-grid label{display:flex; flex-direction:column; gap:4px; font-size:13px; color:var(--muted);}
+.check{display:flex; align-items:center; gap:8px; font-size:14px;}
+.dlg-actions{display:flex; justify-content:flex-end; gap:8px; padding:14px 24px; border-top:1px solid var(--border);}
+.row-buttons{display:flex; flex-wrap:wrap; gap:8px;}
+
+/* =========================================================
+   TOASTS & CONFETTI
+   ========================================================= */
+.toasts{position:fixed; top:18px; right:18px; z-index:200; display:flex; flex-direction:column; gap:10px; width:min(340px, calc(100% - 36px));}
+.toast{
+    background:var(--card); color:var(--text); border-left:5px solid var(--accent);
+    padding:14px 16px; border-radius:14px; box-shadow:0 12px 34px rgba(0,0,0,.2);
+    animation:slide .3s; transition:opacity .4s, transform .4s;
+}
+.toast.hide{opacity:0; transform:translateX(30px);}
+@keyframes slide{from{transform:translateX(40px); opacity:0;}}
+#confetti{position:fixed; inset:0; pointer-events:none; z-index:300;}
+
+footer{text-align:center; color:var(--muted); font-size:13px; margin-top:26px;}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+@media (max-width:900px){
+    .layout{grid-template-columns:1fr;}
+}
+@media (max-width:520px){
+    .container{padding:16px;}
+    .tiles{grid-template-columns:repeat(2,1fr);}
+    .meeting-form{grid-template-columns:1fr 1fr;}
+    .meeting-form #meetingName{grid-column:1 / -1;}
+    .meeting-form .btn{grid-column:1 / -1;}
+    .form-grid{grid-template-columns:1fr;}
+    .ring-wrap{width:220px; height:220px;}
+    .timer{font-size:46px;}
+}
+@media (prefers-reduced-motion: reduce){
+    *{animation:none !important; transition:none !important;}
+}
+</style>
+</head>
+<body>
+
+<div class="toasts" id="toasts"></div>
+<canvas id="confetti" hidden></canvas>
+
+<div class="container">
+
+<header>
+    <div class="brand">
+        <div class="logo">🚶</div>
+        <div>
+            <h1>MoveMe</h1>
+            <div class="greeting" id="greeting"></div>
+        </div>
+    </div>
+    <div class="header-right">
+        <div class="themes" id="themes">
+            <button data-t="sage"  style="background:#5f9079" title="Sage theme"></button>
+            <button data-t="sand"  style="background:#c4775a" title="Sand theme"></button>
+            <button data-t="night" style="background:#1b2630" title="Night theme"></button>
+        </div>
+        <button class="icon-btn" id="openSettings" title="Settings">⚙️</button>
+    </div>
+</header>
+
+<div class="layout">
+
+    <!-- LEFT COLUMN -->
+    <div class="col">
+
+        <div class="card hero">
+            <div class="ring-wrap" id="ringWrap">
+                <svg class="ring" viewBox="0 0 240 240">
+                    <circle class="track" cx="120" cy="120" r="106"/>
+                    <circle class="bar" id="ringBar" cx="120" cy="120" r="106"/>
+                </svg>
+                <div class="ring-center">
+                    <div class="timer" id="timer">60:00</div>
+                    <div class="timer-label" id="timerLabel">until next break</div>
+                </div>
+            </div>
+
+            <div class="status" id="status"></div>
+
+            <div class="suggestion">
+                <span id="suggestion"></span>
+                <button id="newSuggestion" title="Another suggestion">🔄</button>
+            </div>
+
+            <div class="controls">
+                <button class="btn primary" id="breakNow">☕ Take a break now</button>
+                <button class="btn ghost" id="pauseBtn">⏸ Pause</button>
+                <button class="btn ghost" data-add="5">+5 min</button>
+                <button class="btn ghost" data-add="10">+10 min</button>
+            </div>
+            <div class="extra-info">Extra time used today: <b id="extraTime">0 / 30 min</b></div>
+        </div>
+
+        <div class="card">
+            <div class="card-head">
+                <h2>📅 Today's meetings</h2>
+                <span class="muted" id="meetingSummary"></span>
+            </div>
+
+            <div class="timeline" id="timeline"></div>
+
+            <div class="meeting-form">
+                <input type="time" id="meetingTime" title="Start time">
+                <select id="meetingDuration" title="Duration">
+                    <option value="15">15 min</option>
+                    <option value="30" selected>30 min</option>
+                    <option value="45">45 min</option>
+                    <option value="60">1 h</option>
+                    <option value="90">1.5 h</option>
+                    <option value="120">2 h</option>
+                </select>
+                <input id="meetingName" placeholder="Meeting name" maxlength="80">
+                <button class="btn primary" id="addMeeting">Add</button>
+            </div>
+
+            <ul class="meetings" id="meetingList"></ul>
+        </div>
+
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div class="col">
+
+        <div class="card">
+            <div class="card-head">
+                <h2>✅ Today's goals</h2>
+                <span class="muted" id="goalSummary"></span>
+            </div>
+            <div class="tiles" id="tiles"></div>
+            <div class="water-drops" id="waterDrops"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-head">
+                <h2>📈 Last 7 days</h2>
+                <span class="muted" id="streakBadge"></span>
+            </div>
+            <div class="week" id="week"></div>
+            <div class="stats">
+                <div class="stat"><b id="statWorked">0h 0m</b><span>worked today</span></div>
+                <div class="stat"><b id="statBreaks">0</b><span>breaks taken</span></div>
+                <div class="stat"><b id="statStreak">0</b><span>perfect-day streak</span></div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<footer>Tip: minimize MoveMe instead of closing it – reminders only work while it's open.</footer>
+
+</div>
+
+<!-- BREAK OVERLAY -->
+<div class="overlay" id="breakOverlay" hidden>
+    <div class="break-panel">
+        <h2 id="breakHeading">☕ Break time</h2>
+        <div class="muted" id="breakSub">Pick a short routine – it only takes a minute or two.</div>
+
+        <div class="routine-tabs" id="routineTabs"></div>
+
+        <div class="break-ring">
+            <svg viewBox="0 0 170 170">
+                <circle class="track" cx="85" cy="85" r="72"/>
+                <circle class="bar" id="breakBar" cx="85" cy="85" r="72"/>
+            </svg>
+            <div class="center">
+                <div class="big" id="breakTime">0:00</div>
+                <div class="muted" id="breakStepNo"></div>
+            </div>
+        </div>
+
+        <div class="step-text" id="stepText"></div>
+        <ul class="steps" id="stepList"></ul>
+
+        <div class="break-buttons" id="breakButtons"></div>
+    </div>
+</div>
+
+<!-- SETTINGS -->
+<dialog id="settingsDialog">
+    <form method="dialog" id="settingsForm">
+        <div class="dlg-body">
+            <h2>⚙️ Settings</h2>
+
+            <h3>Timer</h3>
+            <div class="form-grid">
+                <label>Break every (minutes)<input type="number" id="setInterval" min="10" max="240"></label>
+                <label>Max extra time per day (min)<input type="number" id="setExtra" min="0" max="240"></label>
+                <label>Workday starts at<input type="time" id="setDayStart"></label>
+                <label>Workday length (hours)<input type="number" id="setWorkHours" min="1" max="16" step="0.5"></label>
+                <label>Meeting reminder (min before)<input type="number" id="setRemind" min="1" max="60"></label>
+            </div>
+
+            <h3>Daily goals</h3>
+            <div class="form-grid">
+                <label>💧 Glasses of water<input type="number" id="goal-water" min="1" max="30"></label>
+                <label>🚶 Walks<input type="number" id="goal-walks" min="1" max="30"></label>
+                <label>👀 Eye breaks<input type="number" id="goal-eyes" min="1" max="30"></label>
+                <label>🤸 Stretching<input type="number" id="goal-stretches" min="1" max="30"></label>
+            </div>
+
+            <h3>Alerts</h3>
+            <label class="check"><input type="checkbox" id="setSound"> Play a sound</label>
+            <p class="muted" id="notifyStatus"></p>
+            <div class="row-buttons">
+                <button type="button" class="btn ghost small" id="notifyBtn">🔔 Enable desktop notifications</button>
+                <button type="button" class="btn ghost small" id="testAlert">Test alert</button>
+            </div>
+
+            <h3>Data</h3>
+            <div class="row-buttons">
+                <button type="button" class="btn ghost small" id="exportBtn">⬇️ Export backup</button>
+                <button type="button" class="btn ghost small" id="importBtn">⬆️ Import backup</button>
+                <button type="button" class="btn ghost small" id="resetBtn">↺ Reset today's progress</button>
+                <input type="file" id="importFile" accept=".json,application/json" hidden>
+            </div>
+        </div>
+        <div class="dlg-actions">
+            <button type="button" class="btn ghost" id="cancelSettings">Cancel</button>
+            <button type="submit" class="btn primary" id="saveSettings">Save</button>
+        </div>
+    </form>
+</dialog>
+
+<script>
+"use strict";
+
+/* =========================================================
+   CONTENT
+   ========================================================= */
+
+const ACTIVITIES = {
+    water: { icon: "💧", label: "Water", color: "var(--c-water)", msgs: [
+        "💧 Hydration Queen unlocked! Your body says thank you.",
+        "💧 Water goal done! Your kidneys are throwing a party.",
+        "💧 Fully hydrated! You're basically a thriving houseplant.",
+        "💧 Goal reached! Your skin and brain both noticed."
+    ]},
+    walks: { icon: "🚶", label: "Walks", color: "var(--c-walks)", msgs: [
+        "🚶 Walking Champion! Your chair feels abandoned.",
+        "🚶 Step master! The office corridors know your name now.",
+        "🚶 Walking goal done! Your legs say thanks for the attention.",
+        "🚶 All walks done! Your fitness tracker is proud of you."
+    ]},
+    eyes: { icon: "👀", label: "Eyes", color: "var(--c-eyes)", msgs: [
+        "👀 Eagle Vision unlocked! Your eyes appreciate today's breaks.",
+        "👀 Eye goal done! The screen can wait, your eyes can't.",
+        "👀 Sharp eyes, sharp mind! All eye breaks completed.",
+        "👀 Your eyes just sent you a thank-you card."
+    ]},
+    stretches: { icon: "🤸", label: "Stretch", color: "var(--c-stretches)", msgs: [
+        "🤸 Human Shape Preserved! Stretching goal completed.",
+        "🤸 Flexible like a cat! Stretching goal done.",
+        "🤸 Your back called. It says: finally!",
+        "🤸 Stretch goal done! Your spine is doing a happy dance."
+    ]}
+};
+const KEYS = Object.keys(ACTIVITIES);
+
+const BONUS_MSGS = [
+    "🔥 Above and beyond! You're a real champ.",
+    "💪 Goal already done and you keep going? Legend!",
+    "⭐ Overachiever mode: ON. Respect!",
+    "🏅 Bonus points! Nobody can stop you today.",
+    "🚀 You're on fire! Your body loves you for this.",
+    "👑 Absolute hero. Keep it up!"
+];
+
+const SUGGESTIONS = [
+    "🚶 Go get some water",
+    "🚶 Walk around the office",
+    "🚶 Visit a colleague instead of messaging",
+    "🚶 Take the stairs once",
+    "👀 Look outside for 20 seconds",
+    "👀 Focus on a distant object",
+    "👀 Close your eyes for a few breaths",
+    "🤸 Stretch your wrists",
+    "🤸 Roll your shoulders",
+    "🤸 Do 5 squats",
+    "🤸 Stand up and reach for the ceiling"
+];
+
+// Guided break routines: [instruction, seconds]
+const ROUTINES = {
+    eyes: { name: "👀 Eye reset", steps: [
+        ["Look at something at least 6 meters away", 20],
+        ["Close your eyes and breathe slowly", 15],
+        ["Blink slowly 10 times", 10],
+        ["Look far away once more", 20]
+    ]},
+    stretches: { name: "🤸 Desk stretch", steps: [
+        ["Roll your shoulders backwards", 20],
+        ["Tilt your head gently left, then right", 20],
+        ["Circle your wrists in both directions", 15],
+        ["Stand up and reach for the ceiling", 20],
+        ["Twist slowly left and right", 20]
+    ]},
+    walks: { name: "🚶 Short walk", steps: [
+        ["Stand up and walk around – grab some water on the way", 180]
+    ]}
+};
+
+const DEFAULTS = {
+    interval: 60, extraLimit: 30, remind: 10, dayStart: "08:00", workHours: 8.5,
+    sound: true, theme: "sage",
+    goals: { water: 8, walks: 8, eyes: 6, stretches: 4 }
+};
+
+/* =========================================================
+   HELPERS
+   ========================================================= */
+
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2, "0");
+const randomItem = list => list[Math.floor(Math.random() * list.length)];
+const uid = () => Math.random().toString(36).slice(2, 10);
+const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
+
+function dateKey(d = new Date()){
+    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+}
+
+// "14:30" -> timestamp for today
+function timeToday(hhmm){
+    const [h, m] = hhmm.split(":").map(Number);
+    const d = new Date();
+    d.setHours(h, m, 0, 0);
+    return d.getTime();
+}
+
+function hhmm(ts){
+    const d = new Date(ts);
+    return pad(d.getHours()) + ":" + pad(d.getMinutes());
+}
+
+function formatClock(totalSeconds){
+    const s = Math.max(0, totalSeconds);
+    return pad(Math.floor(s / 60)) + ":" + pad(s % 60);
+}
+
+function el(tag, className, text){
+    const e = document.createElement(tag);
+    if(className) e.className = className;
+    if(text !== undefined) e.textContent = text;
+    return e;
+}
+
+function load(key, fallback){
+    try {
+        const v = JSON.parse(localStorage.getItem(key));
+        return v === null || v === undefined ? fallback : v;
+    } catch(e){ return fallback; }
+}
+
+function store(key, value){
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch(e){}
+}
+
+/* =========================================================
+   STATE
+   settings – user preferences
+   day      – today's counters and meetings
+   timer    – the main break countdown
+   history  – summaries of previous days (for the week chart)
+   ========================================================= */
+
+function freshDay(){
+    return {
+        date: dateKey(),
+        counts: { water: 0, walks: 0, eyes: 0, stretches: 0 },
+        extra: 0, worked: 0, breaksTaken: 0, breaksSkipped: 0,
+        perfect: false, workdayDone: false, meetings: []
+    };
+}
+
+function normalizeMeeting(m){
+    return {
+        id: m.id || uid(),
+        time: m.time,
+        duration: Number(m.duration) || 30,
+        name: String(m.name || "Meeting"),
+        reminded: !!m.reminded
+    };
+}
+
+function loadSettings(){
+    const s = Object.assign({}, DEFAULTS, load("moveme-settings", {}));
+    s.goals = Object.assign({}, DEFAULTS.goals, s.goals);
+    // Theme from the previous version (stored as plain text)
+    try {
+        const oldTheme = localStorage.getItem("moveme-theme");
+        if(!localStorage.getItem("moveme-settings") && ["sage", "sand", "night"].includes(oldTheme)) s.theme = oldTheme;
+    } catch(e){}
+    return s;
+}
+
+// Reads today's data, converting data saved by the previous (simple) version
+function loadDay(){
+    const saved = load("moveme-day", null);
+    if(saved && saved.date){
+        const d = Object.assign(freshDay(), saved);
+        d.counts = Object.assign(freshDay().counts, saved.counts);
+        d.meetings = (saved.meetings || []).map(normalizeMeeting);
+        return d;
+    }
+
+    const old = load("moveme", null);
+    if(old && old.date){
+        const d = freshDay();
+        // Old version used dates like 2026-10-9 without zero padding
+        const parts = String(old.date).split("-").map(Number);
+        d.date = parts.length === 3 ? parts[0] + "-" + pad(parts[1]) + "-" + pad(parts[2]) : old.date;
+        KEYS.forEach(k => d.counts[k] = Number(old[k]) || 0);
+        d.extra = Number(old.extra) || 0;
+        d.worked = Number(old.worked) || 0;
+        d.perfect = !!old.perfect;
+        d.workdayDone = !!old.workdayDone;
+        d.meetings = (old.meetings || []).map(normalizeMeeting);
+        return d;
+    }
+    return freshDay();
+}
+
+function loadTimer(){
+    const t = load("moveme-timer", null);
+    if(t && t.endsAt) return t;
+    // Previous version stored only the end time
+    const oldEnd = Number(load("moveme-break", 0));
+    if(oldEnd) return { endsAt: oldEnd, total: settings.interval * 60, pausedLeft: null, postponed: null };
+    return null;
+}
+
+let settings = loadSettings();
+let history  = load("moveme-history", {});
+let day      = loadDay();
+let timer    = loadTimer();
+let lastTick = Date.now();
+
+function saveAll(){
+    store("moveme-day", day);
+    store("moveme-timer", timer);
+}
+
+// Stores a finished day under its own date
+function archiveDay(d){
+    history[d.date] = {
+        counts: Object.assign({}, d.counts),
+        goals: Object.assign({}, settings.goals),
+        worked: Math.round(d.worked),
+        breaks: d.breaksTaken
+    };
+    // Keep ~3 months
+    const keys = Object.keys(history).sort();
+    while(keys.length > 90) delete history[keys.shift()];
+    store("moveme-history", history);
+}
+
+function checkNewDay(){
+    if(day.date === dateKey()) return false;
+    archiveDay(day);
+    day = freshDay();   // meetings are per day, so they start empty too
+    startTimer();
+    return true;
+}
+
+/* =========================================================
+   ALERTS: toasts, sound, desktop notifications
+   ========================================================= */
+
+let audio = null;
+function unlockAudio(){
+    try {
+        if(!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
+        if(audio.state === "suspended") audio.resume();
+    } catch(e){}
+}
+document.addEventListener("pointerdown", () => {
+    unlockAudio();
+    if("Notification" in window && Notification.permission === "default"){
+        Notification.requestPermission().then(updateNotifyStatus);
+    }
+}, { once: true });
+
+function chime(soft){
+    if(!settings.sound || !audio) return;
+    const notes = soft ? [880] : [660, 880, 1046];
+    notes.forEach((freq, i) => {
+        const o = audio.createOscillator(), g = audio.createGain();
+        const t = audio.currentTime + i * 0.18;
+        o.type = "sine";
+        o.frequency.value = freq;
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(soft ? 0.08 : 0.18, t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.7);
+        o.connect(g).connect(audio.destination);
+        o.start(t);
+        o.stop(t + 0.75);
+    });
+}
+
+function toast(message, color){
+    const box = $("toasts");
+    while(box.children.length >= 3) box.firstChild.remove();
+    const t = el("div", "toast", message);
+    if(color) t.style.borderLeftColor = color;
+    box.appendChild(t);
+    setTimeout(() => t.classList.add("hide"), 6000);
+    setTimeout(() => t.remove(), 6500);
+}
+
+let titleBlink = null;
+function alertUser(message, color){
+    toast(message, color);
+    chime(false);
+    if("Notification" in window && Notification.permission === "granted"){
+        const options = { body: message, tag: "moveme", renotify: true, icon: "icon-192.png" };
+        try {
+            // Installed app: notifications go through the service worker
+            if(navigator.serviceWorker && navigator.serviceWorker.controller){
+                navigator.serviceWorker.ready.then(reg => reg.showNotification("MoveMe", options));
+            } else {
+                const n = new Notification("MoveMe", options);
+                n.onclick = () => { window.focus(); n.close(); };
+            }
+        } catch(e){}
+    }
+    if(document.hidden && !titleBlink){
+        titleBlink = setInterval(() => {
+            document.title = document.title === "MoveMe" ? "🔔 MoveMe!" : "MoveMe";
+        }, 1000);
+    }
+}
+
+document.addEventListener("visibilitychange", () => {
+    if(!document.hidden && titleBlink){
+        clearInterval(titleBlink);
+        titleBlink = null;
+        document.title = "MoveMe";
+    }
+});
+
+function confetti(){
+    if(matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const c = $("confetti"), ctx = c.getContext("2d");
+    c.width = innerWidth;
+    c.height = innerHeight;
+    c.hidden = false;
+    const colors = ["#4b9fd5", "#5aa27f", "#9a86d8", "#e28a59", "#f2c14e"];
+    const parts = Array.from({ length: 150 }, () => ({
+        x: Math.random() * c.width, y: -20 - Math.random() * c.height * 0.5,
+        vx: (Math.random() - 0.5) * 4, vy: 2 + Math.random() * 4,
+        size: 5 + Math.random() * 6, angle: Math.random() * 6, spin: (Math.random() - 0.5) * 0.3,
+        color: randomItem(colors)
+    }));
+    const start = performance.now();
+    (function frame(now){
+        ctx.clearRect(0, 0, c.width, c.height);
+        for(const p of parts){
+            p.x += p.vx; p.y += p.vy; p.vy += 0.05; p.angle += p.spin;
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.angle);
+            ctx.fillStyle = p.color;
+            ctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2);
+            ctx.restore();
+        }
+        if(now - start < 3500) requestAnimationFrame(frame);
+        else c.hidden = true;
+    })(start);
+}
+
+/* =========================================================
+   MAIN BREAK TIMER
+   ========================================================= */
+
+const RING_C = 2 * Math.PI * 106;
+$("ringBar").style.strokeDasharray = RING_C;
+
+function startTimer(minutes = settings.interval){
+    timer = { endsAt: Date.now() + minutes * 60000, total: minutes * 60, pausedLeft: null, postponed: null };
+    saveAll();
+}
+
+const isPaused = () => timer.pausedLeft !== null;
+
+function secondsLeft(now){
+    return isPaused() ? timer.pausedLeft : Math.ceil((timer.endsAt - now) / 1000);
+}
+
+function togglePause(){
+    const now = Date.now();
+    if(isPaused()){
+        timer.endsAt = now + timer.pausedLeft * 1000;
+        timer.pausedLeft = null;
+    } else {
+        timer.pausedLeft = Math.max(0, secondsLeft(now));
+    }
+    saveAll();
+    tick();
+}
+
+function addTime(minutes){
+    if(day.extra + minutes > settings.extraLimit){
+        toast("⛔ Daily extra time limit reached.", "var(--danger)");
+        return;
+    }
+    day.extra += minutes;
+    if(isPaused()) timer.pausedLeft += minutes * 60;
+    else timer.endsAt += minutes * 60000;
+    timer.total += minutes * 60;
+    saveAll();
+    renderExtra();
+    tick();
+}
+
+function newSuggestion(){
+    $("suggestion").textContent = randomItem(SUGGESTIONS);
+}
+
+function currentMeeting(now){
+    return day.meetings.find(m => {
+        const s = timeToday(m.time);
+        return now >= s && now < s + m.duration * 60000;
+    });
+}
+
+function tick(){
+    const now = Date.now();
+    if(checkNewDay()) renderAll();
+
+    // Count worked time; ignore long gaps (sleeping PC, window closed)
+    const step = now - lastTick;
+    lastTick = now;
+    if(step > 0 && step < 5 * 60000 && !isPaused()) day.worked += step / 1000;
+
+    const meeting = currentMeeting(now);
+    let left = secondsLeft(now);
+
+    if(!isPaused()){
+        if(left < -120){
+            // Ended long ago (window was closed) – start fresh without a stale alert
+            startTimer();
+        }
+        else if(left <= 0){
+            if(meeting && timer.postponed !== meeting.id){
+                // Don't interrupt a meeting – break right after it
+                const end = timeToday(meeting.time) + meeting.duration * 60000;
+                timer.endsAt = end;
+                timer.total += Math.round((end - now) / 1000);
+                timer.postponed = meeting.id;
+                toast("📅 You're in a meeting – your break moved to " + hhmm(end) + ".", "var(--meeting)");
+            } else {
+                startTimer();
+                triggerBreak();
+            }
+        }
+        left = secondsLeft(now);
+    }
+
+    checkMeetings(now);
+    renderTimer(left, meeting);
+
+    if(day.worked >= settings.workHours * 3600 && !day.workdayDone){
+        day.workdayDone = true;
+        alertUser("🌟 Great job today! You already worked " + settings.workHours +
+            " hours. Time to relax and enjoy your evening.");
+    }
+
+    // Slow-changing parts once a minute
+    if(new Date(now).getSeconds() === 0){
+        renderTimeline();
+        renderMeetings();
+        renderStats();
+        renderGreeting();
+    }
+    saveAll();
+}
+
+function renderTimer(left, meeting){
+    const wrap = $("ringWrap");
+    const paused = isPaused();
+    const frac = clamp(left / Math.max(timer.total, left, 1), 0, 1);
+    $("ringBar").style.strokeDashoffset = RING_C * (1 - frac);
+    $("timer").textContent = formatClock(left);
+
+    wrap.className = "ring-wrap" +
+        (paused ? " paused" : meeting ? " meeting" : left <= 300 ? " danger" : left <= 600 ? " warn" : "");
+
+    let label = "until next break", status = "", cls = "";
+    if(paused){ label = "paused"; status = "⏸ Timer paused"; }
+    else if(meeting){ status = "📅 In meeting: " + meeting.name; cls = "meeting"; }
+    else if(left <= 300){ status = "🚨 Break in 5 minutes"; cls = "danger"; }
+    else if(left <= 600){ status = "⚠️ Break in 10 minutes"; cls = "warn"; }
+
+    $("timerLabel").textContent = label;
+    const st = $("status");
+    if(st.textContent !== status) st.textContent = status;
+    st.className = "status " + cls;
+    $("pauseBtn").textContent = paused ? "▶ Resume" : "⏸ Pause";
+}
+
+function renderExtra(){
+    $("extraTime").textContent = day.extra + " / " + settings.extraLimit + " min";
+}
+
+/* =========================================================
+   GUIDED BREAK
+   ========================================================= */
+
+const BREAK_C = 2 * Math.PI * 72;
+$("breakBar").style.strokeDasharray = BREAK_C;
+
+let brk = null;   // { key, step, stepEndsAt, auto, runner }
+
+// Suggest the activity that is furthest from its goal
+function recommendedRoutine(){
+    return ["eyes", "stretches", "walks"]
+        .map(k => [k, day.counts[k] / settings.goals[k]])
+        .sort((a, b) => a[1] - b[1])[0][0];
+}
+
+function triggerBreak(){
+    newSuggestion();
+    alertUser("⏰ Time for a break! Get away from your desk for a moment.");
+    // A break is already open – just refresh the heading instead of stacking
+    if(brk) return;
+    openBreak(true);
+}
+
+function openBreak(auto){
+    brk = { key: recommendedRoutine(), step: -1, auto: auto, runner: null };
+    $("breakHeading").textContent = auto ? "⏰ Time for a break!" : "☕ Break time";
+    $("breakOverlay").hidden = false;
+    renderBreak();
+}
+
+function closeBreak(){
+    if(brk && brk.runner) clearInterval(brk.runner);
+    brk = null;
+    $("breakOverlay").hidden = true;
+}
+
+function startRoutine(){
+    unlockAudio();
+    brk.step = 0;
+    brk.stepEndsAt = Date.now() + ROUTINES[brk.key].steps[0][1] * 1000;
+    brk.runner = setInterval(breakTick, 250);
+    renderBreak();
+}
+
+function breakTick(){
+    const steps = ROUTINES[brk.key].steps;
+    const left = (brk.stepEndsAt - Date.now()) / 1000;
+    if(left <= 0){
+        brk.step++;
+        if(brk.step >= steps.length){
+            finishBreak();
+            return;
+        }
+        chime(true);
+        brk.stepEndsAt = Date.now() + steps[brk.step][1] * 1000;
+        renderBreak();
+        return;
+    }
+    const total = steps[brk.step][1];
+    $("breakTime").textContent = formatSeconds(Math.ceil(left));
+    $("breakBar").style.strokeDashoffset = BREAK_C * (1 - left / total);
+}
+
+function formatSeconds(s){
+    return Math.floor(s / 60) + ":" + pad(s % 60);
+}
+
+function finishBreak(){
+    const key = brk.key, auto = brk.auto;
+    clearInterval(brk.runner);
+    brk.runner = null;
+    brk.step = "done";
+    day.breaksTaken++;
+    // A break taken early resets the main countdown
+    if(!auto) startTimer();
+    chime(false);
+    renderBreak();
+    addActivity(key, 1);
+    setTimeout(() => { if(brk && brk.step === "done") closeBreak(); }, 2500);
+}
+
+function skipBreak(){
+    if(brk.auto) day.breaksSkipped++;
+    saveAll();
+    closeBreak();
+}
+
+function renderBreak(){
+    const routine = ROUTINES[brk.key];
+    const running = typeof brk.step === "number" && brk.step >= 0;
+    const done = brk.step === "done";
+
+    // Routine picker
+    const tabs = $("routineTabs");
+    tabs.innerHTML = "";
+    tabs.classList.toggle("locked", running || done);
+    for(const k of Object.keys(ROUTINES)){
+        const b = el("button", k === brk.key ? "active" : "", ROUTINES[k].name);
+        b.onclick = () => { brk.key = k; renderBreak(); };
+        tabs.appendChild(b);
+    }
+
+    // Step list
+    const list = $("stepList");
+    list.innerHTML = "";
+    routine.steps.forEach((s, i) => {
+        const li = el("li", done || (running && i < brk.step) ? "done" : running && i === brk.step ? "current" : "");
+        li.appendChild(el("span", "", s[0]));
+        li.appendChild(el("span", "", formatSeconds(s[1])));
+        list.appendChild(li);
+    });
+
+    const totalSecs = routine.steps.reduce((a, s) => a + s[1], 0);
+    if(done){
+        $("breakTime").textContent = "✓";
+        $("breakStepNo").textContent = "";
+        $("breakBar").style.strokeDashoffset = 0;
+        $("stepText").textContent = "Well done! " + ACTIVITIES[brk.key].icon + " +1 " +
+            ACTIVITIES[brk.key].label.toLowerCase() + " logged.";
+    } else if(running){
+        $("breakTime").textContent = formatSeconds(routine.steps[brk.step][1]);
+        $("breakStepNo").textContent = "step " + (brk.step + 1) + " of " + routine.steps.length;
+        $("breakBar").style.strokeDashoffset = 0;
+        $("stepText").textContent = routine.steps[brk.step][0];
+    } else {
+        $("breakTime").textContent = formatSeconds(totalSecs);
+        $("breakStepNo").textContent = "total";
+        $("breakBar").style.strokeDashoffset = 0;
+        $("stepText").textContent = "Ready when you are.";
+    }
+
+    // Buttons
+    const box = $("breakButtons");
+    box.innerHTML = "";
+    const button = (text, cls, fn) => {
+        const b = el("button", "btn " + cls, text);
+        b.onclick = fn;
+        box.appendChild(b);
+    };
+    if(done) button("Close", "ghost", closeBreak);
+    else if(running){
+        button("✓ Done early", "primary", finishBreak);
+        button("Cancel", "ghost", closeBreak);
+    } else {
+        button("▶ Start", "primary", startRoutine);
+        button(brk.auto ? "Skip this break" : "Not now", "ghost", skipBreak);
+    }
+}
+
+/* =========================================================
+   GOALS
+   ========================================================= */
+
+const TILE_C = 2 * Math.PI * 32;
+
+function buildTiles(){
+    const box = $("tiles");
+    box.innerHTML = "";
+    for(const k of KEYS){
+        const a = ACTIVITIES[k];
+        const tile = el("div", "tile");
+        tile.id = "tile-" + k;
+        tile.style.setProperty("--c", a.color);
+        tile.innerHTML =
+            '<button class="tile-ring" title="Add one">' +
+                '<svg viewBox="0 0 76 76"><circle class="track" cx="38" cy="38" r="32"/>' +
+                '<circle class="bar" cx="38" cy="38" r="32"/></svg>' +
+                '<span class="icon"></span><span class="plus">+</span>' +
+            '</button>' +
+            '<div class="tile-label"></div>' +
+            '<div class="tile-count"><span class="num"></span><span class="bonus"></span></div>' +
+            '<button class="undo" title="Undo">−1</button>';
+        tile.querySelector(".icon").textContent = a.icon;
+        tile.querySelector(".tile-label").textContent = a.label;
+        tile.querySelector(".bar").style.strokeDasharray = TILE_C;
+        tile.querySelector(".tile-ring").onclick = () => addActivity(k, 1);
+        tile.querySelector(".undo").onclick = () => addActivity(k, -1);
+        box.appendChild(tile);
+    }
+}
+
+function addActivity(key, delta){
+    const before = day.counts[key];
+    day.counts[key] = Math.max(0, before + delta);
+    const count = day.counts[key], goal = settings.goals[key];
+
+    if(delta > 0){
+        const tile = $("tile-" + key);
+        tile.classList.remove("pop");
+        void tile.offsetWidth;
+        tile.classList.add("pop");
+
+        if(count === goal) toast(randomItem(ACTIVITIES[key].msgs), ACTIVITIES[key].color);
+        else if(count > goal) toast(randomItem(BONUS_MSGS), ACTIVITIES[key].color);
+    }
+
+    if(!day.perfect && KEYS.every(k => day.counts[k] >= settings.goals[k])){
+        day.perfect = true;
+        setTimeout(() => {
+            toast("🏆 PERFECT HEALTH DAY! All goals completed. Amazing work!", "#f2c14e");
+            confetti();
+        }, 1200);
+    }
+
+    saveAll();
+    renderGoals();
+    renderWeek();
+    renderStats();
+}
+
+function renderGoals(){
+    let reached = 0;
+    for(const k of KEYS){
+        const tile = $("tile-" + k);
+        const count = day.counts[k], goal = settings.goals[k];
+        if(count >= goal) reached++;
+        tile.querySelector(".bar").style.strokeDashoffset = TILE_C * (1 - Math.min(count / goal, 1));
+        tile.querySelector(".num").textContent = Math.min(count, goal) + "/" + goal;
+        tile.querySelector(".bonus").textContent = count > goal ? "+" + (count - goal) : "";
+    }
+    $("goalSummary").textContent = reached + " of " + KEYS.length + " done";
+
+    const goal = settings.goals.water, drunk = day.counts.water;
+    $("waterDrops").textContent = "💧".repeat(Math.min(drunk, goal)) + "○".repeat(Math.max(goal - drunk, 0));
+}
+
+/* =========================================================
+   WEEK & STATS
+   ========================================================= */
+
+function dayRecord(key){
+    if(key === day.date) return { counts: day.counts, goals: settings.goals, worked: day.worked, breaks: day.breaksTaken };
+    return history[key] || null;
+}
+
+function completion(rec){
+    return KEYS.reduce((sum, k) => sum + Math.min((rec.counts[k] || 0) / (rec.goals[k] || 1), 1), 0) / KEYS.length;
+}
+
+const isPerfect = rec => KEYS.every(k => (rec.counts[k] || 0) >= (rec.goals[k] || 1));
+
+// Consecutive perfect days; days without any data (weekends, holidays) are skipped
+function streak(){
+    let count = 0;
+    const d = new Date();
+    for(let i = 0; i < 120; i++){
+        const rec = dayRecord(dateKey(d));
+        d.setDate(d.getDate() - 1);
+        if(!rec) continue;
+        if(isPerfect(rec)) count++;
+        else if(i === 0) continue;   // today isn't over yet
+        else break;
+    }
+    return count;
+}
+
+function renderWeek(){
+    const box = $("week");
+    box.innerHTML = "";
+    const d = new Date();
+    d.setDate(d.getDate() - 6);
+    for(let i = 0; i < 7; i++){
+        const key = dateKey(d);
+        const rec = dayRecord(key);
+        const col = el("div", "day-col" + (key === day.date ? " today" : ""));
+        const bar = el("div", "day-bar");
+        if(rec){
+            const pct = Math.round(completion(rec) * 100);
+            const fill = el("div", "fill");
+            fill.style.height = pct + "%";
+            bar.appendChild(fill);
+            if(isPerfect(rec)) bar.classList.add("perfect");
+            bar.title = d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" }) + ": " + pct + "% of goals";
+        } else {
+            bar.classList.add("empty");
+            bar.title = "No data";
+        }
+        col.appendChild(bar);
+        col.appendChild(el("div", "day-name", d.toLocaleDateString("en-GB", { weekday: "short" })));
+        box.appendChild(col);
+        d.setDate(d.getDate() + 1);
+    }
+}
+
+function renderStats(){
+    const mins = Math.floor(day.worked / 60);
+    $("statWorked").textContent = Math.floor(mins / 60) + "h " + (mins % 60) + "m";
+    $("statBreaks").textContent = day.breaksTaken;
+    const s = streak();
+    $("statStreak").textContent = s;
+    $("streakBadge").textContent = s > 1 ? "🔥 " + s + " days in a row" : "";
+}
+
+function renderGreeting(){
+    const h = new Date().getHours();
+    const hello = h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+    const date = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
+    $("greeting").textContent = hello + " · " + date;
+}
+
+/* =========================================================
+   MEETINGS
+   ========================================================= */
+
+function addMeeting(){
+    const time = $("meetingTime").value;
+    if(!time){
+        toast("🕒 Please pick a start time for the meeting.", "var(--meeting)");
+        $("meetingTime").focus();
+        return;
+    }
+    day.meetings.push(normalizeMeeting({
+        time: time,
+        duration: $("meetingDuration").value,
+        name: $("meetingName").value.trim() || "Meeting"
+    }));
+    day.meetings.sort((a, b) => a.time.localeCompare(b.time));
+    $("meetingName").value = "";
+    $("meetingTime").value = "";
+    saveAll();
+    renderMeetings();
+    renderTimeline();
+    // Reminder for a meeting that starts very soon
+    checkMeetings(Date.now());
+}
+
+function removeMeeting(id){
+    day.meetings = day.meetings.filter(m => m.id !== id);
+    saveAll();
+    renderMeetings();
+    renderTimeline();
+}
+
+function checkMeetings(now){
+    let changed = false;
+    for(const m of day.meetings){
+        const start = timeToday(m.time);
+        if(!m.reminded && now >= start - settings.remind * 60000){
+            m.reminded = true;
+            changed = true;
+            const minutes = Math.round((start - now) / 60000);
+            // No reminder for meetings that already started
+            if(minutes > 0){
+                alertUser("📅 " + m.name + " starts in " + minutes + " min. Stand up, stretch and grab some water first!",
+                    "var(--meeting)");
+            }
+        }
+    }
+    if(changed){
+        saveAll();
+        renderMeetings();
+    }
+}
+
+function renderMeetings(){
+    const list = $("meetingList");
+    list.innerHTML = "";
+    const now = Date.now();
+    const upcoming = day.meetings.filter(m => timeToday(m.time) + m.duration * 60000 > now).length;
+    $("meetingSummary").textContent = day.meetings.length ? upcoming + " upcoming" : "";
+
+    if(!day.meetings.length){
+        list.appendChild(el("li", "empty", "No meetings yet – add one to get a reminder before it starts."));
+        return;
+    }
+    for(const m of day.meetings){
+        const start = timeToday(m.time), end = start + m.duration * 60000;
+        const li = el("li", end <= now ? "past" : start <= now ? "live" : "");
+        li.appendChild(el("span", "m-dot"));
+        li.appendChild(el("span", "m-time", m.time + "–" + hhmm(end)));
+        const name = el("span", "m-name", m.name);
+        name.title = m.name;
+        li.appendChild(name);
+        if(start <= now && now < end) li.appendChild(el("span", "m-badge", "now"));
+        const rm = el("button", "remove", "✕");
+        rm.title = "Remove";
+        rm.onclick = () => removeMeeting(m.id);
+        li.appendChild(rm);
+        list.appendChild(li);
+    }
+}
+
+function renderTimeline(){
+    const box = $("timeline");
+    box.innerHTML = "";
+    const now = Date.now();
+
+    const workStart = timeToday(settings.dayStart);
+    const workEnd = workStart + settings.workHours * 3600000;
+    let start = workStart, end = workEnd;
+    for(const m of day.meetings){
+        const s = timeToday(m.time);
+        start = Math.min(start, s);
+        end = Math.max(end, s + m.duration * 60000);
+    }
+    start = Math.floor(start / 3600000) * 3600000;
+    end = Math.ceil(end / 3600000) * 3600000;
+    const pos = t => ((t - start) / (end - start) * 100) + "%";
+
+    box.appendChild(el("div", "tl-track"));
+
+    const work = el("div", "tl-work");
+    work.style.left = pos(workStart);
+    work.style.width = ((workEnd - workStart) / (end - start) * 100) + "%";
+    work.title = "Workday " + hhmm(workStart) + "–" + hhmm(workEnd);
+    box.appendChild(work);
+
+    for(const m of day.meetings){
+        const s = timeToday(m.time);
+        const block = el("div", "tl-meeting");
+        block.style.left = pos(s);
+        block.style.width = (m.duration * 60000 / (end - start) * 100) + "%";
+        block.title = m.time + "  " + m.name;
+        box.appendChild(block);
+    }
+
+    const hours = (end - start) / 3600000;
+    const every = hours > 12 ? 2 : 1;
+    for(let t = start; t <= end; t += 3600000 * every){
+        box.appendChild(el("span", "tl-hour", String(new Date(t).getHours())));
+        box.lastChild.style.left = pos(t);
+    }
+
+    if(!isPaused() && timer.endsAt > start && timer.endsAt < end){
+        const b = el("span", "tl-break", "☕");
+        b.style.left = pos(timer.endsAt);
+        b.title = "Next break " + hhmm(timer.endsAt);
+        box.appendChild(b);
+    }
+
+    if(now >= start && now <= end){
+        const n = el("div", "tl-now");
+        n.style.left = pos(now);
+        n.title = "Now";
+        box.appendChild(n);
+    }
+}
+
+/* =========================================================
+   THEMES & SETTINGS
+   ========================================================= */
+
+function applyTheme(name){
+    document.documentElement.dataset.theme = name;
+    document.querySelectorAll("#themes button").forEach(b => b.classList.toggle("active", b.dataset.t === name));
+}
+
+function setTheme(name){
+    settings.theme = name;
+    store("moveme-settings", settings);
+    applyTheme(name);
+}
+
+function updateNotifyStatus(){
+    const s = $("notifyStatus"), b = $("notifyBtn");
+    if(!("Notification" in window)){
+        s.textContent = "Desktop notifications aren't available here – you'll get a sound and a blinking window title instead.";
+        b.hidden = true;
+    } else if(Notification.permission === "granted"){
+        s.textContent = "✅ Desktop notifications are on.";
+        b.hidden = true;
+    } else if(Notification.permission === "denied"){
+        s.textContent = "Desktop notifications are blocked by the browser. You'll still get a sound and a blinking title.";
+        b.hidden = true;
+    } else {
+        s.textContent = "Allow notifications so reminders pop up even when MoveMe is minimized.";
+        b.hidden = false;
+    }
+}
+
+function openSettings(){
+    $("setInterval").value = settings.interval;
+    $("setExtra").value = settings.extraLimit;
+    $("setDayStart").value = settings.dayStart;
+    $("setWorkHours").value = settings.workHours;
+    $("setRemind").value = settings.remind;
+    $("setSound").checked = settings.sound;
+    KEYS.forEach(k => $("goal-" + k).value = settings.goals[k]);
+    updateNotifyStatus();
+    $("settingsDialog").showModal();
+}
+
+function num(id, min, max, fallback){
+    const v = parseFloat($(id).value);
+    return isNaN(v) ? fallback : clamp(v, min, max);
+}
+
+function saveSettings(){
+    const oldInterval = settings.interval;
+    settings.interval = Math.round(num("setInterval", 10, 240, settings.interval));
+    settings.extraLimit = Math.round(num("setExtra", 0, 240, settings.extraLimit));
+    settings.workHours = num("setWorkHours", 1, 16, settings.workHours);
+    settings.remind = Math.round(num("setRemind", 1, 60, settings.remind));
+    settings.dayStart = $("setDayStart").value || settings.dayStart;
+    settings.sound = $("setSound").checked;
+    KEYS.forEach(k => settings.goals[k] = Math.round(num("goal-" + k, 1, 30, settings.goals[k])));
+    store("moveme-settings", settings);
+
+    if(settings.interval !== oldInterval){
+        startTimer();
+        toast("⏱ New break interval: every " + settings.interval + " minutes.");
+    } else {
+        toast("✅ Settings saved.");
+    }
+    renderAll();
+}
+
+function exportData(){
+    archiveDay(day);   // includes today in the backup as well
+    const data = { app: "MoveMe", version: 2, exported: new Date().toISOString(), settings, day, history };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const a = el("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "moveme-backup-" + dateKey() + ".json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+function importData(file){
+    const reader = new FileReader();
+    reader.onload = () => {
+        try {
+            const data = JSON.parse(reader.result);
+            if(data.app !== "MoveMe") throw new Error("not a MoveMe file");
+            settings = Object.assign({}, DEFAULTS, data.settings);
+            settings.goals = Object.assign({}, DEFAULTS.goals, settings.goals);
+            history = data.history || {};
+            if(data.day && data.day.date === dateKey()){
+                day = Object.assign(freshDay(), data.day);
+                day.counts = Object.assign(freshDay().counts, data.day.counts);
+                day.meetings = (data.day.meetings || []).map(normalizeMeeting);
+            }
+            store("moveme-settings", settings);
+            store("moveme-history", history);
+            saveAll();
+            renderAll();
+            $("settingsDialog").close();
+            toast("✅ Backup imported.");
+        } catch(e){
+            toast("⚠️ This file doesn't look like a MoveMe backup.", "var(--danger)");
+        }
+    };
+    reader.readAsText(file);
+}
+
+function resetToday(){
+    if(!confirm("Reset today's goals, extra time and stats? Meetings stay.")) return;
+    const meetings = day.meetings;
+    day = freshDay();
+    day.meetings = meetings;
+    startTimer();
+    saveAll();
+    renderAll();
+    $("settingsDialog").close();
+    toast("↺ Today's progress was reset.");
+}
+
+/* =========================================================
+   WIRING
+   ========================================================= */
+
+function renderAll(){
+    applyTheme(settings.theme);
+    renderGreeting();
+    renderGoals();
+    renderWeek();
+    renderStats();
+    renderExtra();
+    renderMeetings();
+    renderTimeline();
+    tick();
+}
+
+document.querySelectorAll("#themes button").forEach(b => b.onclick = () => setTheme(b.dataset.t));
+document.querySelectorAll("[data-add]").forEach(b => b.onclick = () => addTime(Number(b.dataset.add)));
+$("newSuggestion").onclick = newSuggestion;
+$("pauseBtn").onclick = togglePause;
+$("breakNow").onclick = () => { if(!brk) openBreak(false); };
+$("addMeeting").onclick = addMeeting;
+$("meetingName").addEventListener("keydown", e => { if(e.key === "Enter") addMeeting(); });
+
+$("openSettings").onclick = openSettings;
+$("cancelSettings").onclick = () => $("settingsDialog").close();
+$("settingsForm").addEventListener("submit", saveSettings);
+$("notifyBtn").onclick = () => Notification.requestPermission().then(updateNotifyStatus);
+$("testAlert").onclick = () => { unlockAudio(); alertUser("🔔 This is how a MoveMe reminder looks and sounds."); };
+$("exportBtn").onclick = exportData;
+$("importBtn").onclick = () => $("importFile").click();
+$("importFile").onchange = e => { if(e.target.files[0]) importData(e.target.files[0]); e.target.value = ""; };
+$("resetBtn").onclick = resetToday;
+
+document.addEventListener("keydown", e => {
+    if(e.key === "Escape" && brk && (brk.step === -1 || brk.step === "done")) closeBreak();
+});
+
+// Ask before closing by accident – minimizing keeps reminders working
+window.addEventListener("beforeunload", e => {
+    e.preventDefault();
+    e.returnValue = "";
+});
+
+/* =========================================================
+   START
+   ========================================================= */
+
+// A day saved earlier (e.g. yesterday) goes to history under its own date
+if(day.date !== dateKey()){
+    archiveDay(day);
+    day = freshDay();
+    timer = null;
+}
+if(!timer) startTimer();
+
+buildTiles();
+newSuggestion();
+renderAll();
+setInterval(tick, 1000);
+
+// Offline support when served from the web
+if("serviceWorker" in navigator && location.protocol === "https:"){
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+
+</script>
+</body>
+</html>
