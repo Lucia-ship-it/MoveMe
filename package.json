@@ -19,6 +19,7 @@
     "productName": "MoveMe",
     "files": ["main.js", "MoveMe.html", "icon.svg", "icon-*.png"],
     "directories": { "buildResources": "build" },
+    "afterPack": "build/adhoc-sign.js",
     "mac": {
       "category": "public.app-category.healthcare-fitness",
       "icon": "build/icon.png",

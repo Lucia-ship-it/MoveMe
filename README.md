@@ -38,7 +38,7 @@ Download the installer from the [Releases page](https://github.com/Lucia-ship-it
 The apps are not code-signed:
 
 - **Windows:** SmartScreen shows a warning – click *More info → Run anyway*.
-- **macOS:** on first launch, right-click MoveMe and choose *Open*.
+- **macOS:** on first launch, right-click MoveMe and choose *Open*. If macOS says the app is "damaged", run `xattr -cr /Applications/MoveMe.app` in Terminal and open it again.
 
 Allow notifications when asked, so reminders show up even when the window is minimized.
 You can check this in ⚙️ Settings → *Test alert*.
