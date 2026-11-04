@@ -10,6 +10,22 @@ Na GitHub sa nič neposiela.
 
 ---
 
+## Desktop aplikácia (Windows a macOS)
+
+Hotové inštalátory sú na stránke **Releases** repozitára
+(https://github.com/Lucia-ship-it/MoveMe/releases):
+
+- Windows: `MoveMe-<verzia>-win-x64.exe`
+- macOS: `MoveMe-<verzia>-mac-arm64.dmg` (Apple Silicon) alebo `-mac-x64.dmg` (Intel)
+
+Aplikácie nie sú podpísané: Windows ukáže SmartScreen (*Ďalšie informácie → Spustiť aj tak*),
+macOS pri prvom spustení vyžaduje pravý klik na MoveMe → *Otvoriť*.
+
+Nové vydanie: `git tag v1.0.0 && git push origin v1.0.0` – GitHub Actions zbuilduje obe verzie.
+Lokálne: `npm install && npm start`.
+
+---
+
 ## 1. Zapnutie GitHub Pages (raz)
 
 1. Na GitHube otvor repozitár **MoveMe** → **Settings** → vľavo **Pages**.

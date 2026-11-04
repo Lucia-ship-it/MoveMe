@@ -1,0 +1,34 @@
+{
+  "name": "moveme",
+  "version": "1.0.0",
+  "description": "MoveMe - your personal health break coach",
+  "author": "Lucia",
+  "license": "UNLICENSED",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.lucia.moveme",
+    "productName": "MoveMe",
+    "files": ["main.js", "MoveMe.html", "icon.svg", "icon-*.png"],
+    "directories": { "buildResources": "build" },
+    "mac": {
+      "category": "public.app-category.healthcare-fitness",
+      "icon": "build/icon.png",
+      "target": [{ "target": "dmg", "arch": ["arm64", "x64"] }]
+    },
+    "win": {
+      "icon": "build/icon.png",
+      "target": [{ "target": "nsis", "arch": ["x64"] }]
+    },
+    "nsis": { "oneClick": true, "perMachine": false },
+    "artifactName": "MoveMe-${version}-${os}-${arch}.${ext}"
+  }
+}
