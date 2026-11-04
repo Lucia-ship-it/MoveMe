@@ -1,7 +1,7 @@
 // MoveMe offline support.
 // Always tries the internet first (so updates arrive right away),
 // falls back to the saved copy when offline.
-const CACHE = "moveme-v1";
+const CACHE = "moveme-v2";
 const FILES = ["./", "./MoveMe.html", "./manifest.webmanifest", "./icon.svg", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", e => {
@@ -31,13 +31,17 @@ self.addEventListener("fetch", e => {
     );
 });
 
-// Clicking a notification brings the MoveMe window to front
+// Clicking a notification (or its button) brings MoveMe to front
+// and tells it what was clicked: "break", "snooze" or "" (the notification itself)
 self.addEventListener("notificationclick", e => {
     e.notification.close();
+    const action = e.action || (e.notification.tag === "break" ? "break" : "");
     e.waitUntil(
         self.clients.matchAll({ type: "window" }).then(list => {
-            if(list.length) return list[0].focus();
-            return self.clients.openWindow("./MoveMe.html");
+            if(!list.length) return self.clients.openWindow("./MoveMe.html");
+            list[0].postMessage({ type: "notification", action: action });
+            // "+5 min" doesn't need to open the window
+            if(action !== "snooze") return list[0].focus();
         })
     );
 });

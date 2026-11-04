@@ -115,6 +115,21 @@ header{display:flex; justify-content:space-between; align-items:center; gap:14px
 .ring-wrap.danger{--ring:var(--danger);}
 .ring-wrap.meeting{--ring:var(--meeting);}
 .ring-wrap.paused{--ring:var(--muted);}
+.ring-wrap.due{--ring:var(--danger); animation:pulse 1.6s ease-in-out infinite;}
+.ring-wrap.due .timer{color:var(--danger);}
+@keyframes pulse{50%{transform:scale(1.04);}}
+
+/* Banner when desktop notifications are not allowed */
+.notify-banner{
+    display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    background:var(--card); border:1px solid var(--warn); border-radius:16px;
+    padding:14px 44px 14px 18px; margin-bottom:20px; box-shadow:var(--shadow); position:relative;
+}
+.nb-icon{font-size:24px;}
+.nb-text{flex:1; min-width:200px; display:flex; flex-direction:column; gap:2px;}
+.nb-text span{color:var(--muted); font-size:14px;}
+.nb-close{position:absolute; top:8px; right:8px; color:var(--muted); padding:4px 8px; border-radius:8px;}
+.nb-close:hover{background:var(--soft);}
 .ring{width:100%; height:100%; transform:rotate(-90deg);}
 .ring circle{fill:none; stroke-width:14;}
 .ring .track{stroke:var(--track);}
@@ -318,6 +333,16 @@ footer{text-align:center; color:var(--muted); font-size:13px; margin-top:26px;}
     </div>
 </header>
 
+<div class="notify-banner" id="notifyBanner" hidden>
+    <span class="nb-icon">🔔</span>
+    <div class="nb-text">
+        <b id="notifyBannerTitle">Turn on desktop reminders</b>
+        <span id="notifyBannerText">Allow notifications so a reminder pops up on your screen even when MoveMe is minimized.</span>
+    </div>
+    <button class="btn primary small" id="notifyBannerBtn">Allow notifications</button>
+    <button class="nb-close" id="notifyBannerClose" title="Hide">✕</button>
+</div>
+
 <div class="layout">
 
     <!-- LEFT COLUMN -->
@@ -397,7 +422,7 @@ footer{text-align:center; color:var(--muted); font-size:13px; margin-top:26px;}
             </div>
             <div class="week" id="week"></div>
             <div class="stats">
-                <div class="stat"><b id="statWorked">0h 0m</b><span>worked today</span></div>
+                <div class="stat"><b id="statWorked">0h 0m</b><span id="statWorkedLabel">at work today</span></div>
                 <div class="stat"><b id="statBreaks">0</b><span>breaks taken</span></div>
                 <div class="stat"><b id="statStreak">0</b><span>perfect-day streak</span></div>
             </div>
@@ -406,7 +431,7 @@ footer{text-align:center; color:var(--muted); font-size:13px; margin-top:26px;}
     </div>
 </div>
 
-<footer>Tip: minimize MoveMe instead of closing it – reminders only work while it's open.</footer>
+<footer>Tip: minimize MoveMe instead of closing it – reminders only work while it's open. The workday counts from the first time MoveMe opens each day.</footer>
 
 </div>
 
@@ -446,8 +471,8 @@ footer{text-align:center; color:var(--muted); font-size:13px; margin-top:26px;}
             <div class="form-grid">
                 <label>Break every (minutes)<input type="number" id="setInterval" min="10" max="240"></label>
                 <label>Max extra time per day (min)<input type="number" id="setExtra" min="0" max="240"></label>
-                <label>Workday starts at<input type="time" id="setDayStart"></label>
-                <label>Workday length (hours)<input type="number" id="setWorkHours" min="1" max="16" step="0.5"></label>
+                <label>Today I started at<input type="time" id="setStartedAt"></label>
+                <label>Workday length incl. breaks (hours)<input type="number" id="setWorkHours" min="1" max="16" step="0.5"></label>
                 <label>Meeting reminder (min before)<input type="number" id="setRemind" min="1" max="60"></label>
             </div>
 
@@ -561,7 +586,7 @@ const ROUTINES = {
 };
 
 const DEFAULTS = {
-    interval: 60, extraLimit: 30, remind: 10, dayStart: "08:00", workHours: 8.5,
+    interval: 60, extraLimit: 30, remind: 10, workHours: 8, nag: 10,
     sound: true, theme: "sage",
     goals: { water: 8, walks: 8, eyes: 6, stretches: 4 }
 };
@@ -629,7 +654,8 @@ function freshDay(){
         date: dateKey(),
         counts: { water: 0, walks: 0, eyes: 0, stretches: 0 },
         extra: 0, worked: 0, breaksTaken: 0, breaksSkipped: 0,
-        perfect: false, workdayDone: false, meetings: []
+        perfect: false, workdayDone: false, meetings: [],
+        startedAt: Date.now()   // first time MoveMe ran today – the workday counts from here
     };
 }
 
@@ -651,6 +677,12 @@ function loadSettings(){
         const oldTheme = localStorage.getItem("moveme-theme");
         if(!localStorage.getItem("moveme-settings") && ["sage", "sand", "night"].includes(oldTheme)) s.theme = oldTheme;
     } catch(e){}
+    // Workday is now 8 h including breaks (was 8.5 h of work)
+    if(!s.version){
+        if(s.workHours === 8.5) s.workHours = 8;
+        delete s.dayStart;
+        s.version = 3;
+    }
     return s;
 }
 
@@ -661,6 +693,7 @@ function loadDay(){
         const d = Object.assign(freshDay(), saved);
         d.counts = Object.assign(freshDay().counts, saved.counts);
         d.meetings = (saved.meetings || []).map(normalizeMeeting);
+        if(!saved.startedAt) d.startedAt = Date.now() - (Number(saved.worked) || 0) * 1000;
         return d;
     }
 
@@ -694,11 +727,13 @@ let settings = loadSettings();
 let history  = load("moveme-history", {});
 let day      = loadDay();
 let timer    = loadTimer();
-let lastTick = Date.now();
+// Last moment MoveMe was running – tells us later if it was closed or the PC slept
+let lastTick = Number(load("moveme-lastseen", 0)) || Date.now();
 
 function saveAll(){
     store("moveme-day", day);
     store("moveme-timer", timer);
+    store("moveme-lastseen", lastTick);
 }
 
 // Stores a finished day under its own date
@@ -734,12 +769,7 @@ function unlockAudio(){
         if(audio.state === "suspended") audio.resume();
     } catch(e){}
 }
-document.addEventListener("pointerdown", () => {
-    unlockAudio();
-    if("Notification" in window && Notification.permission === "default"){
-        Notification.requestPermission().then(updateNotifyStatus);
-    }
-}, { once: true });
+document.addEventListener("pointerdown", unlockAudio, { once: true });
 
 function chime(soft){
     if(!settings.sound || !audio) return;
@@ -769,18 +799,28 @@ function toast(message, color){
 }
 
 let titleBlink = null;
-function alertUser(message, color){
+
+// kind: "break" adds buttons (Start break / +5 min); every desktop notification
+// stays on screen until it is clicked or closed
+function alertUser(message, color, kind){
     toast(message, color);
     chime(false);
     if("Notification" in window && Notification.permission === "granted"){
-        const options = { body: message, tag: "moveme", renotify: true, icon: "icon-192.png" };
+        const options = {
+            body: message, tag: kind || "moveme", renotify: true,
+            icon: "icon-192.png", requireInteraction: true
+        };
         try {
-            // Installed app: notifications go through the service worker
+            // Installed app: notifications go through the service worker (supports buttons)
             if(navigator.serviceWorker && navigator.serviceWorker.controller){
+                if(kind === "break") options.actions = [
+                    { action: "break", title: "☕ Start break" },
+                    { action: "snooze", title: "+5 min" }
+                ];
                 navigator.serviceWorker.ready.then(reg => reg.showNotification("MoveMe", options));
             } else {
                 const n = new Notification("MoveMe", options);
-                n.onclick = () => { window.focus(); n.close(); };
+                n.onclick = () => { window.focus(); n.close(); handleNotificationAction(kind === "break" ? "break" : ""); };
             }
         } catch(e){}
     }
@@ -837,17 +877,64 @@ const RING_C = 2 * Math.PI * 106;
 $("ringBar").style.strokeDasharray = RING_C;
 
 function startTimer(minutes = settings.interval){
-    timer = { endsAt: Date.now() + minutes * 60000, total: minutes * 60, pausedLeft: null, postponed: null };
+    timer = { endsAt: Date.now() + minutes * 60000, total: minutes * 60, pausedLeft: null, postponed: null, due: null, lastNag: 0 };
+    setBadge(false);
     saveAll();
 }
 
 const isPaused = () => timer.pausedLeft !== null;
+// The hour is over and MoveMe waits until you actually take the break
+const isDue = () => !!timer.due;
 
 function secondsLeft(now){
+    if(isDue()) return -Math.floor((now - timer.due) / 1000);
     return isPaused() ? timer.pausedLeft : Math.ceil((timer.endsAt - now) / 1000);
 }
 
+// Dot on the taskbar icon of the installed app
+function setBadge(on){
+    try {
+        if(on && navigator.setAppBadge) navigator.setAppBadge();
+        if(!on && navigator.clearAppBadge) navigator.clearAppBadge();
+    } catch(e){}
+}
+
+function breakDue(now){
+    timer.due = now;
+    timer.lastNag = now;
+    newSuggestion();
+    setBadge(true);
+    alertUser("⏰ Your hour is up – time for a break! The next hour starts after your break.", null, "break");
+    if(!brk) openBreak(true);
+}
+
+// Buttons and clicks on desktop notifications
+function handleNotificationAction(action){
+    if(action === "snooze"){
+        if(isDue()) snooze(5);
+    } else if(isDue() && !brk){
+        openBreak(true);
+    }
+}
+
+function snooze(minutes){
+    if(day.extra + minutes > settings.extraLimit){
+        toast("⛔ Daily extra time limit reached – please take your break.", "var(--danger)");
+        return;
+    }
+    day.extra += minutes;
+    timer.endsAt = Date.now() + minutes * 60000;
+    timer.total = minutes * 60;
+    timer.due = null;
+    setBadge(false);
+    if(brk && brk.step === -1) closeBreak();
+    saveAll();
+    renderExtra();
+    tick();
+}
+
 function togglePause(){
+    if(isDue()) return;
     const now = Date.now();
     if(isPaused()){
         timer.endsAt = now + timer.pausedLeft * 1000;
@@ -860,6 +947,7 @@ function togglePause(){
 }
 
 function addTime(minutes){
+    if(isDue()) return snooze(minutes);
     if(day.extra + minutes > settings.extraLimit){
         toast("⛔ Daily extra time limit reached.", "var(--danger)");
         return;
@@ -888,42 +976,50 @@ function tick(){
     const now = Date.now();
     if(checkNewDay()) renderAll();
 
-    // Count worked time; ignore long gaps (sleeping PC, window closed)
-    const step = now - lastTick;
+    // Was MoveMe closed or the PC asleep (lunch, meeting room…) for a while?
+    const wasAway = now - lastTick > 5 * 60000;
     lastTick = now;
-    if(step > 0 && step < 5 * 60000 && !isPaused()) day.worked += step / 1000;
+
+    // Workday = time since MoveMe first ran today, breaks included
+    day.worked = Math.max(0, (now - day.startedAt) / 1000);
 
     const meeting = currentMeeting(now);
-    let left = secondsLeft(now);
 
-    if(!isPaused()){
-        if(left < -120){
-            // Ended long ago (window was closed) – start fresh without a stale alert
+    if(isDue()){
+        if(wasAway){
+            // You were away from the PC – that counts as the break
             startTimer();
+        } else if(now - timer.lastNag >= settings.nag * 60000){
+            // Still no break – remind again
+            timer.lastNag = now;
+            const late = Math.round((now - timer.due) / 60000);
+            alertUser("⏰ Your break is " + late + " min overdue. Stand up for a moment – the timer is waiting for you.",
+                "var(--danger)", "break");
         }
-        else if(left <= 0){
-            if(meeting && timer.postponed !== meeting.id){
-                // Don't interrupt a meeting – break right after it
-                const end = timeToday(meeting.time) + meeting.duration * 60000;
-                timer.endsAt = end;
-                timer.total += Math.round((end - now) / 1000);
-                timer.postponed = meeting.id;
-                toast("📅 You're in a meeting – your break moved to " + hhmm(end) + ".", "var(--meeting)");
-            } else {
-                startTimer();
-                triggerBreak();
-            }
+    }
+    else if(!isPaused() && secondsLeft(now) <= 0){
+        if(wasAway){
+            // The hour ended while you were away – start a fresh one
+            startTimer();
+        } else if(meeting && timer.postponed !== meeting.id){
+            // Don't interrupt a meeting – break right after it
+            const end = timeToday(meeting.time) + meeting.duration * 60000;
+            timer.endsAt = end;
+            timer.total += Math.round((end - now) / 1000);
+            timer.postponed = meeting.id;
+            toast("📅 You're in a meeting – your break moved to " + hhmm(end) + ".", "var(--meeting)");
+        } else {
+            breakDue(now);
         }
-        left = secondsLeft(now);
     }
 
     checkMeetings(now);
-    renderTimer(left, meeting);
+    renderTimer(secondsLeft(now), meeting);
 
     if(day.worked >= settings.workHours * 3600 && !day.workdayDone){
         day.workdayDone = true;
-        alertUser("🌟 Great job today! You already worked " + settings.workHours +
-            " hours. Time to relax and enjoy your evening.");
+        alertUser("🏠 " + settings.workHours + " hours are done – time to go home! Great job today, enjoy your evening.",
+            "#f2c14e", "home");
     }
 
     // Slow-changing parts once a minute
@@ -938,16 +1034,17 @@ function tick(){
 
 function renderTimer(left, meeting){
     const wrap = $("ringWrap");
-    const paused = isPaused();
-    const frac = clamp(left / Math.max(timer.total, left, 1), 0, 1);
+    const paused = isPaused(), due = isDue();
+    const frac = due ? 1 : clamp(left / Math.max(timer.total, left, 1), 0, 1);
     $("ringBar").style.strokeDashoffset = RING_C * (1 - frac);
-    $("timer").textContent = formatClock(left);
+    $("timer").textContent = due ? "+" + formatClock(-left) : formatClock(left);
 
-    wrap.className = "ring-wrap" +
-        (paused ? " paused" : meeting ? " meeting" : left <= 300 ? " danger" : left <= 600 ? " warn" : "");
+    wrap.className = "ring-wrap" + (due ? " due" :
+        paused ? " paused" : meeting ? " meeting" : left <= 300 ? " danger" : left <= 600 ? " warn" : "");
 
     let label = "until next break", status = "", cls = "";
-    if(paused){ label = "paused"; status = "⏸ Timer paused"; }
+    if(due){ label = "break overdue"; status = "☕ Break time! The next hour starts after your break."; cls = "danger"; }
+    else if(paused){ label = "paused"; status = "⏸ Timer paused"; }
     else if(meeting){ status = "📅 In meeting: " + meeting.name; cls = "meeting"; }
     else if(left <= 300){ status = "🚨 Break in 5 minutes"; cls = "danger"; }
     else if(left <= 600){ status = "⚠️ Break in 10 minutes"; cls = "warn"; }
@@ -957,6 +1054,8 @@ function renderTimer(left, meeting){
     if(st.textContent !== status) st.textContent = status;
     st.className = "status " + cls;
     $("pauseBtn").textContent = paused ? "▶ Resume" : "⏸ Pause";
+    $("pauseBtn").hidden = due;
+    $("breakNow").textContent = due ? "☕ Start my break" : "☕ Take a break now";
 }
 
 function renderExtra(){
@@ -977,14 +1076,6 @@ function recommendedRoutine(){
     return ["eyes", "stretches", "walks"]
         .map(k => [k, day.counts[k] / settings.goals[k]])
         .sort((a, b) => a[1] - b[1])[0][0];
-}
-
-function triggerBreak(){
-    newSuggestion();
-    alertUser("⏰ Time for a break! Get away from your desk for a moment.");
-    // A break is already open – just refresh the heading instead of stacking
-    if(brk) return;
-    openBreak(true);
 }
 
 function openBreak(auto){
@@ -1037,8 +1128,9 @@ function finishBreak(){
     brk.runner = null;
     brk.step = "done";
     day.breaksTaken++;
-    // A break taken early resets the main countdown
-    if(!auto) startTimer();
+    // Break done – the next hour starts now
+    startTimer();
+    tick();
     chime(false);
     renderBreak();
     addActivity(key, 1);
@@ -1046,9 +1138,13 @@ function finishBreak(){
 }
 
 function skipBreak(){
-    if(brk.auto) day.breaksSkipped++;
+    if(isDue()){
+        day.breaksSkipped++;
+        startTimer();
+    }
     saveAll();
     closeBreak();
+    tick();
 }
 
 function renderBreak(){
@@ -1251,6 +1347,8 @@ function renderWeek(){
 function renderStats(){
     const mins = Math.floor(day.worked / 60);
     $("statWorked").textContent = Math.floor(mins / 60) + "h " + (mins % 60) + "m";
+    $("statWorkedLabel").textContent = "since " + hhmm(day.startedAt) +
+        " · home at " + hhmm(day.startedAt + settings.workHours * 3600000);
     $("statBreaks").textContent = day.breaksTaken;
     const s = streak();
     $("statStreak").textContent = s;
@@ -1351,7 +1449,7 @@ function renderTimeline(){
     box.innerHTML = "";
     const now = Date.now();
 
-    const workStart = timeToday(settings.dayStart);
+    const workStart = day.startedAt;
     const workEnd = workStart + settings.workHours * 3600000;
     let start = workStart, end = workEnd;
     for(const m of day.meetings){
@@ -1417,6 +1515,35 @@ function setTheme(name){
     applyTheme(name);
 }
 
+let bannerClosed = false;
+
+// Shown until desktop notifications are allowed – without them a reminder is easy to miss
+function renderNotifyBanner(){
+    const b = $("notifyBanner");
+    if(!("Notification" in window) || Notification.permission === "granted" || bannerClosed){
+        b.hidden = true;
+        return;
+    }
+    b.hidden = false;
+    const denied = Notification.permission === "denied";
+    $("notifyBannerTitle").textContent = denied ? "Desktop reminders are blocked" : "Turn on desktop reminders";
+    $("notifyBannerText").textContent = denied
+        ? "Without them you only see reminders when MoveMe is open. In Edge, click the lock icon (or ⋯ → App info) → Permissions → Notifications → Allow, then reopen MoveMe. Also check Windows Settings → System → Notifications."
+        : "Allow notifications so a reminder pops up on your screen even when MoveMe is minimized.";
+    $("notifyBannerBtn").hidden = denied;
+}
+
+function askNotifications(){
+    if(!("Notification" in window)) return;
+    Notification.requestPermission().then(() => {
+        updateNotifyStatus();
+        renderNotifyBanner();
+        if(Notification.permission === "granted"){
+            alertUser("🔔 Desktop reminders are on. This is how a break reminder will look.");
+        }
+    });
+}
+
 function updateNotifyStatus(){
     const s = $("notifyStatus"), b = $("notifyBtn");
     if(!("Notification" in window)){
@@ -1437,7 +1564,7 @@ function updateNotifyStatus(){
 function openSettings(){
     $("setInterval").value = settings.interval;
     $("setExtra").value = settings.extraLimit;
-    $("setDayStart").value = settings.dayStart;
+    $("setStartedAt").value = hhmm(day.startedAt);
     $("setWorkHours").value = settings.workHours;
     $("setRemind").value = settings.remind;
     $("setSound").checked = settings.sound;
@@ -1457,8 +1584,14 @@ function saveSettings(){
     settings.extraLimit = Math.round(num("setExtra", 0, 240, settings.extraLimit));
     settings.workHours = num("setWorkHours", 1, 16, settings.workHours);
     settings.remind = Math.round(num("setRemind", 1, 60, settings.remind));
-    settings.dayStart = $("setDayStart").value || settings.dayStart;
     settings.sound = $("setSound").checked;
+    // Correct today's start, e.g. when MoveMe was opened later than you arrived
+    const started = $("setStartedAt").value;
+    if(started && started !== hhmm(day.startedAt) && timeToday(started) <= Date.now()){
+        day.startedAt = timeToday(started);
+    }
+    day.workdayDone = Date.now() >= day.startedAt + settings.workHours * 3600000;
+    saveAll();
     KEYS.forEach(k => settings.goals[k] = Math.round(num("goal-" + k, 1, 30, settings.goals[k])));
     store("moveme-settings", settings);
 
@@ -1536,6 +1669,7 @@ function renderAll(){
     renderExtra();
     renderMeetings();
     renderTimeline();
+    renderNotifyBanner();
     tick();
 }
 
@@ -1550,8 +1684,17 @@ $("meetingName").addEventListener("keydown", e => { if(e.key === "Enter") addMee
 $("openSettings").onclick = openSettings;
 $("cancelSettings").onclick = () => $("settingsDialog").close();
 $("settingsForm").addEventListener("submit", saveSettings);
-$("notifyBtn").onclick = () => Notification.requestPermission().then(updateNotifyStatus);
-$("testAlert").onclick = () => { unlockAudio(); alertUser("🔔 This is how a MoveMe reminder looks and sounds."); };
+$("notifyBtn").onclick = askNotifications;
+$("notifyBannerBtn").onclick = askNotifications;
+$("notifyBannerClose").onclick = () => { bannerClosed = true; renderNotifyBanner(); };
+$("testAlert").onclick = () => { unlockAudio(); alertUser("🔔 This is how a MoveMe reminder looks and sounds.", null, "break"); };
+
+// Clicks on desktop notifications (installed app) arrive from the service worker
+if("serviceWorker" in navigator){
+    navigator.serviceWorker.addEventListener("message", e => {
+        if(e.data && e.data.type === "notification") handleNotificationAction(e.data.action);
+    });
+}
 $("exportBtn").onclick = exportData;
 $("importBtn").onclick = () => $("importFile").click();
 $("importFile").onchange = e => { if(e.target.files[0]) importData(e.target.files[0]); e.target.value = ""; };
