@@ -35,10 +35,22 @@ Download the installer from the [Releases page](https://github.com/Lucia-ship-it
 - Windows: `MoveMe-<version>-win-x64.exe`
 - macOS: `MoveMe-<version>-mac-arm64.dmg` (Apple Silicon) or `-mac-x64.dmg` (Intel)
 
-The apps are not code-signed:
+The apps are not signed or notarized by Apple (that needs a paid developer account), so:
 
 - **Windows:** SmartScreen shows a warning – click *More info → Run anyway*.
-- **macOS:** on first launch, right-click MoveMe and choose *Open*. If macOS says the app is "damaged", run `xattr -cr /Applications/MoveMe.app` in Terminal and open it again.
+- **macOS:** do **not** drag MoveMe out of the DMG with Finder. macOS marks the copy as
+  "downloaded from the internet" and the app then just bounces in the Dock and never opens.
+  Install it from Terminal instead (works on Apple Silicon and Intel):
+
+  1. Double-click the `.dmg` to mount it.
+  2. Run:
+     ```
+     ditto --noqtn /Volumes/MoveMe/MoveMe.app /Applications/MoveMe.app
+     ```
+     (If `/Applications/MoveMe.app` already exists from an earlier attempt, delete it first.)
+  3. Open MoveMe from Launchpad or Applications.
+
+  If the mounted disk has a different name, check it with `ls /Volumes`.
 
 Allow notifications when asked, so reminders show up even when the window is minimized.
 You can check this in ⚙️ Settings → *Test alert*.
