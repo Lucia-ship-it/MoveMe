@@ -1,90 +1,113 @@
 # 🚶 MoveMe
 
-Osobný kouč na prestávky pri práci za počítačom: časovač prestávok s krátkymi cvičeniami,
-pripomienky meetingov, pitný režim a denné ciele.
+A personal coach for breaks while working at a computer: a break timer with short
+exercises, meeting reminders, hydration tracking and daily goals.
 
-**Aplikácia:** https://lucia-ship-it.github.io/MoveMe/
+**Web app:** https://lucia-ship-it.github.io/MoveMe/
 
-Všetky dáta (ciele, meetingy, nastavenia) sa ukladajú len v prehliadači na tvojom počítači.
-Na GitHub sa nič neposiela.
+All data (goals, meetings, settings) is stored locally on your computer only.
+Nothing is sent to GitHub or anywhere else.
 
----
+## What's inside
 
-## Desktop aplikácia (Windows a macOS)
+**Dashboard** – break countdown, daily goals (water, walks, eye breaks, stretching),
+today's meetings and a 7-day overview.
 
-Hotové inštalátory sú na stránke **Releases** repozitára
-(https://github.com/Lucia-ship-it/MoveMe/releases):
+![Dashboard](docs/screenshot-main.png)
 
-- Windows: `MoveMe-<verzia>-win-x64.exe`
-- macOS: `MoveMe-<verzia>-mac-arm64.dmg` (Apple Silicon) alebo `-mac-x64.dmg` (Intel)
+**Break routines** – pick an eye reset, desk stretch or short walk and follow it step by step.
 
-Aplikácie nie sú podpísané: Windows ukáže SmartScreen (*Ďalšie informácie → Spustiť aj tak*),
-macOS pri prvom spustení vyžaduje pravý klik na MoveMe → *Otvoriť*.
+![Break time](docs/screenshot-break.png)
 
-Nové vydanie: `git tag v1.0.0 && git push origin v1.0.0` – GitHub Actions zbuilduje obe verzie.
-Lokálne: `npm install && npm start`.
+**Settings** – break interval, workday length, meeting reminder lead time, daily goals,
+sound and notifications, plus backup export/import.
 
----
+![Settings](docs/screenshot-settings.png)
 
-## 1. Zapnutie GitHub Pages (raz)
-
-1. Na GitHube otvor repozitár **MoveMe** → **Settings** → vľavo **Pages**.
-2. *Source*: **Deploy from a branch**, *Branch*: **main** a **/ (root)** → **Save**.
-3. Po 1–2 minútach beží aplikácia na adrese vyššie.
-
-## 2. Inštalácia na pracovnom počítači (Windows, Edge)
-
-1. V Edge otvor https://lucia-ship-it.github.io/MoveMe/
-2. Vpravo hore klikni na **⋯ → Aplikácie → Inštalovať MoveMe**
-   (alebo na ikonu inštalácie priamo v adresnom riadku).
-3. MoveMe sa otvorí vo vlastnom okne a pribudne v ponuke Štart.
-   Pravým klikom na ikonu na lište ju môžeš **pripnúť na panel úloh**.
-4. Pri prvom kliknutí do aplikácie povoľ **upozornenia**.
-   Skontrolovať to vieš v ⚙️ Settings → *Test alert*.
-
-## 3. Automatické spustenie po zapnutí počítača
-
-1. V Edge otvor adresu `edge://apps`
-2. Pri MoveMe klikni na **⋯ → Podrobnosti aplikácie** (App details).
-3. Zapni **Spustiť automaticky pri prihlásení do zariadenia**
-   (Auto-start on device login).
-
-> Tip: MoveMe počas dňa nezatváraj, len minimalizuj – pripomienky fungujú,
-> iba keď je aplikácia spustená.
-
-## Aktualizácie
-
-Keď sa na GitHube zmení `MoveMe.html`, nová verzia sa načíta pri ďalšom otvorení aplikácie.
-Aplikácia funguje aj bez internetu (použije poslednú uloženú verziu).
+Three colour themes (sage, sand, night) can be switched in the top-right corner.
 
 ---
 
-## Záloha: spustenie zo súboru (bez internetu a bez GitHub Pages)
+## Desktop app (Windows and macOS)
 
-Ak by firma blokovala stránky `github.io`:
+Download the installer from the [Releases page](https://github.com/Lucia-ship-it/MoveMe/releases):
 
-1. Stiahni `MoveMe.html` a `Spustit-MoveMe.bat` do jedného priečinka
-   (na GitHube **Code → Download ZIP**, alebo vo VS Code *Clone Repository*).
-2. Dvojklik na `Spustit-MoveMe.bat` otvorí MoveMe vo vlastnom okne.
-3. Automatické spustenie: **Win + R** → `shell:startup` → vlož tam
-   **odkaz** (zástupcu) na `Spustit-MoveMe.bat`.
+- Windows: `MoveMe-<version>-win-x64.exe`
+- macOS: `MoveMe-<version>-mac-arm64.dmg` (Apple Silicon) or `-mac-x64.dmg` (Intel)
 
-Ak sú súbory `.bat` zablokované, vytvor na ploche odkaz s cieľom:
+The apps are not code-signed:
+
+- **Windows:** SmartScreen shows a warning – click *More info → Run anyway*.
+- **macOS:** on first launch, right-click MoveMe and choose *Open*.
+
+Allow notifications when asked, so reminders show up even when the window is minimized.
+You can check this in ⚙️ Settings → *Test alert*.
+
+> Tip: minimize MoveMe instead of closing it – reminders only work while the app is running.
+
+**Releasing a new version:** `git tag v1.0.1 && git push origin v1.0.1`.
+GitHub Actions builds both installers and attaches them to the release.
+To run it locally: `npm install && npm start`.
+
+---
+
+## Use it as a web app
+
+### 1. Enable GitHub Pages (once)
+
+1. On GitHub open the **MoveMe** repository → **Settings** → **Pages**.
+2. *Source*: **Deploy from a branch**, *Branch*: **main** and **/ (root)** → **Save**.
+3. After 1–2 minutes the app is live at the address above.
+
+### 2. Install on a work computer (Windows, Edge)
+
+1. Open https://lucia-ship-it.github.io/MoveMe/ in Edge.
+2. Click **⋯ → Apps → Install MoveMe** (or the install icon in the address bar).
+3. MoveMe opens in its own window and appears in the Start menu.
+   Right-click its taskbar icon to **pin it**.
+4. Allow **notifications** on first use. You can verify in ⚙️ Settings → *Test alert*.
+
+### 3. Start automatically at login
+
+1. In Edge open `edge://apps`.
+2. Next to MoveMe click **⋯ → App details**.
+3. Turn on **Auto-start on device login**.
+
+### Updates
+
+When `MoveMe.html` changes on GitHub, the new version loads the next time you open the app.
+The app also works offline (it uses the last saved version).
+
+---
+
+## Fallback: run from a file (no internet, no GitHub Pages)
+
+If your company blocks `github.io`:
+
+1. Download `MoveMe.html` and `Spustit-MoveMe.bat` into one folder
+   (on GitHub **Code → Download ZIP**, or clone in VS Code).
+2. Double-click `Spustit-MoveMe.bat` to open MoveMe in its own window.
+3. To autostart: **Win + R** → `shell:startup` → put a **shortcut** to `Spustit-MoveMe.bat` there.
+
+If `.bat` files are blocked, create a desktop shortcut with this target:
 
 ```
-"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --app="file:///C:/Users/TVOJE_MENO/Documents/MoveMe/MoveMe.html"
+"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --app="file:///C:/Users/YOUR_NAME/Documents/MoveMe/MoveMe.html"
 ```
 
-V tomto režime nefungujú systémové upozornenia Windowsu tak spoľahlivo –
-pripomienky sa ohlásia zvukom a blikaním na lište.
+In this mode Windows system notifications are less reliable –
+reminders are signalled by sound and a flashing taskbar icon.
 
-## Súbory
+## Files
 
-| Súbor | Na čo je |
+| File | Purpose |
 |---|---|
-| `MoveMe.html` | celá aplikácia |
-| `index.html` | presmeruje hlavnú adresu na aplikáciu |
-| `manifest.webmanifest`, `icon*` | názov a ikona nainštalovanej aplikácie |
-| `sw.js` | beh bez internetu a upozornenia |
-| `Spustit-MoveMe.bat` | spustenie zo súboru vo Windows |
-| `MoveMe-simple.html` | staršia jednoduchšia verzia |
+| `MoveMe.html` | the whole app |
+| `index.html` | redirects the main address to the app |
+| `manifest.webmanifest`, `icon*` | name and icon of the installed app |
+| `sw.js` | offline support and notifications |
+| `main.js`, `package.json` | desktop app (Electron) |
+| `.github/workflows/release.yml` | builds Windows and macOS installers |
+| `Spustit-MoveMe.bat` | launch from a file on Windows |
+| `MoveMe-simple.html` | older, simpler version |
+| `docs/` | README screenshots |
